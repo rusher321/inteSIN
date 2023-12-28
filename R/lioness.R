@@ -39,11 +39,10 @@ lioness <- function(matrix, n_method = .pearsonF, transF = F){
   }
   if(transF){
     # use the format gene-gene-correlation-sample
+    lionessout <- lapply(lionessout, function(x){tmp <- as.matrix(x); diag(tmp) <- NA; tmp[lower.tri(tmp)] <- NA;tmp})
     lionessout <- melt(lionessout)
     colnames(lionessout) <- c("Feature_1", "Feature_2", "Rho", "Sample")
-    lionessout <- lionessout[lionessout$Feature_1 != lionessout$Feature_2, ]
-    lionessout <- lionessout[order(lionessout$Rho), ]
-    lionessout <- lionessout[seq(1,nrow(lionessout), 2), ]
+    lionessout <- lionessout[!is.na(lionessout$Rho), ] # remove the loop and repeat edga
   }
   return(lionessout)
 }

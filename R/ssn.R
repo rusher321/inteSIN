@@ -32,30 +32,29 @@ ssn <- function(matrix, n_method = .pearsonF, transF = F){
   # this applies netFun and extracts the aggregate network
   aggNet <- n_method(matrix)
   # prepare the ssn output
-  lionessout_z <- list()
-  lionessout_p <- list()
-  # run function f and the LIONESS equation
+  ssout_z <- list()
+  ssout_p <- list()
+  # run function f and the SS equation
   for(i in 1:nsamp){
     ss <- n_method(rbind(matrix, matrix[i, ])) # apply n_method on all samples plus one
     delta_ss <- ss-aggNet # apply ssn equation
     r_ss <- (1-delta_ss*delta_ss)/(nsamp-2)
     z_ss <- delta_ss/r_ss
     p_ss <- 2*pnorm(-abs(z_ss), 0, 1) # z-score to P
-    lionessout_z[[samples[i]]] <- z_ss
-    lionessout_p[[samples[i]]] <- p_ss
+    ssout_z[[samples[i]]] <- z_ss
+    ssout_p[[samples[i]]] <- p_ss
   }
-  lionessout <- list(lionessout_z, lionessout_p)
-  names(lionessout) <- c("Z_score", "Pvalue")
+  ssout <- list(ssout_z, ssout_p)
+  names(ssout) <- c("Z_score", "Pvalue")
 
   if(transF){
     # use the format gene-gene-correlation-sample
-    lionessout <- melt(lionessout_z)
-    lionessout_p <- melt(lionessout_p)
-    colnames(lionessout) <- c("Feature_1", "Feature_2", "Z_score", "Sample")
-    lionessout$Pvalue <- lionessout_p[,3]
-    lionessout <- lionessout[lionessout$Feature_1 != lionessout$Feature_2, ]
-    lionessout <- lionessout[order(lionessout$Z_score), ]
-    lionessout <- lionessout[seq(1,nrow(lionessout), 2), ]
+    ssout_z <- lapply(ssout_z, function(x){tmp <- as.matrix(x); diag(tmp) <- NA; tmp[lower.tri(tmp)] <- NA;tmp})
+    ssout <- melt(ssout_z)
+    ssout_p <- melt(ssout_p)
+    colnames(ssout) <- c("Feature_1", "Feature_2", "Z_score", "Sample")
+    ssout$Pvalue <- ssout_p[,3]
+    ssout <- ssout[!is.na(ssout$Z_score), ] # remove the loop and repeat edga
   }
-  return(lionessout)
+  return(ssout)
 }

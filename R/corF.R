@@ -16,7 +16,7 @@
 .sparccF <- function(x){
   print("Sparcc need use the read cound, specific for microbiome data")
   cor_matrix <- SpiecEasi::sparcc(x)
-  return(cor_matrix)
+  return(cor_matrix$Cor)
 }
 
 .miF <- function(x){

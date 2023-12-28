@@ -24,7 +24,7 @@ Sweet <- function(dat, s_method = .pearsonF, n_method = .pearsonF, balance = 0.1
 
   # calculate the weight
   cat("row is sample and colmun is feature!\n")
-  cat("s_method and n_method need to be one of .pearsonF, .spearmanF, .kendallF and .sparccF!\n")
+  cat("s_method and n_method need to be one of .pearsonF, .spearmanF, .kendallF, .miF, .clrF and .sparccF!\n")
 
   corM <- s_method(t(dat))
   pat_N <- nrow(dat)
@@ -65,9 +65,9 @@ Sweet <- function(dat, s_method = .pearsonF, n_method = .pearsonF, balance = 0.1
   outlist <- lapply(outlist_z, function(x){x[abs(x) < cutoff] <- 0; x <- sign(x); as(x, "dgCMatrix")})
   names(outlist) <- names(outlist_z) <- PID
   if(out_z){
-    return(outlist)
-  }else{
     return(outlist_z)
+  }else{
+    return(outlist)
   }
 
 }

@@ -49,11 +49,10 @@ iENA_sPCC <- function(dat, PID = "all", transF = F){
 
   if(transF){
     # use the format gene-gene-correlation-sample
+    sPCC <- lapply(sPCC, function(x){tmp <- as.matrix(x); diag(tmp) <- NA; tmp[lower.tri(tmp)] <- NA;tmp})
     sPCC <- melt(sPCC)
     colnames(sPCC) <- c("Feature_1", "Feature_2", "Rho", "Sample")
-    sPCC <- sPCC[sPCC$Feature_1 != sPCC$Feature_2, ]
-    sPCC <- sPCC[order(sPCC$Rho), ]
-    sPCC <- sPCC[seq(1,nrow(sPCC), 2), ]
+    sPCC <- sPCC[!is.na(sPCC$Rho), ]
   }
   return(sPCC)
 }
