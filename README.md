@@ -1,5 +1,4 @@
-# inteSIN
-
+<img src="data/logo.png" width="100">
 `inteSIN`: integrate sample-specific inference network methods. This package now includes `SSN`, `LIONESS`, `SSPGI`, `iENA`, `CSN` and `Sweet`.
 
 <img src="data/microbiota.png" width="500">
