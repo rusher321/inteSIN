@@ -1,4 +1,4 @@
-<img src="data/logo.png" width="50", height = "30>
+<img src="data/logo.png" width="50", height = "30">
 `inteSIN`: integrate sample-specific inference network methods. This package now includes `SSN`, `LIONESS`, `SSPGI`, `iENA`, `CSN` and `Sweet`.
 
 <img src="data/flow.png" width="500">
