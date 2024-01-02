@@ -14,7 +14,6 @@ metadata <- dat[,-1]
 colnames(micro) <- gsub(".metaphlan4.abundance.profile", "", colnames(micro))
 rownames(micro) <- micro$clade_name
 micro <- micro[,-c(1:2)]
-
 ```
 
 ### 1.1 preprocess
@@ -31,7 +30,7 @@ library(RColorBrewer)
 .topTax(t(genus_norm), K = 10, tax_colour = brewer.pal(n = 12, name = "Paired"))
 ```
 
-### 1.2 SIN generate
+### 1.2 SIN generate using Sweet
 
 ```{r}
 # first to test sweet 
@@ -43,7 +42,7 @@ save(sweet_res, file = "data/gyy_sweet.Rdata")
 
 ### 1.3 SIN analysis
 
-Comparison of SIN degree between different group 
+#### 1.3.1 Comparison of SIN degree between different group 
 
 ```{r}
 sweetres <- readRDS("data/gyy_sweet.Rdata")
@@ -55,6 +54,7 @@ degree_matrix <- netres$degree
 rownames(degree_matrix) <- colnames(psudo_count)
 ```
 
+Comparison of SIN degree between pre-treatment and post-treatment in **acarbose**
 
 ```{r}
 ##----------------- acar -------------------------------------- ## 
@@ -67,6 +67,8 @@ library(DT)
 datatable(acar_degree_res, caption = "Comparision of degree between pre-treatment and post-treatment in acarbose group") %>% formatRound(colnames(acar_degree_res)[1:10],3)
 ```
 
+Comparison of SIN degree between pre-treatment and post-treatment in **glipizide**
+
 ```{r}
 ##---------------- glip --------------------------------------- ##
 Glip <- metadata[metadata$Drug == "Glipizide", ]
@@ -75,6 +77,10 @@ glip_degree_res <- .mywilcox_2t(datamatrix = t(degree_matrix), configdata = Glip
 datatable(glip_degree_res, caption = "Comparision of degree between pre-treatment and post-treatment in Glipizide group") %>% formatRound(colnames(glip_degree_res)[1:10],3)
 ```
 
+#### 1.3.2 Comparison of SIN degree matrix between different group 
+
+acarbose group 
+
 ```{r}
 ## permanova 
 acar_degree <- t(degree_matrix[,rownames(acar)])
@@ -82,11 +88,18 @@ acar_perm <- adonis2(acar_degree~Time, data = acar, method = "jaccard")
 datatable(acar_perm)
 ```
 
+glipizide group 
+
 ```{r}
 glip_degree <- t(degree_matrix[,rownames(Glip)])
 glip_perm <- adonis2(glip_degree~Time, data = Glip, method = "jaccard")
 datatable(glip_perm)
 ```
+
+
+#### 1.3.2 Comparison of edge between different group 
+
+acarbose group 
 
 ```{r}
 ## gene_pair comparision 
@@ -109,6 +122,8 @@ acar_pair_res$feature2 <- unlist(lapply(rownames(acar_pair_res), function(x){ind
 acar_pair_res_sig <- acar_pair_res[acar_pair_res$sign_p.value < 0.01, ]
 pheatmap(pair_acar[, rownames(acar_pair_res_sig)], annotation_row = acar[,'Time',drop=F],show_rownames = F)
 ```
+
+glipizide group 
 
 ```{r}
 ## glip 
