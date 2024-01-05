@@ -1,8 +1,8 @@
-<img src="data/logo.png" width="50">
+<img src="data/logo.png" width="600">
 
-`inteSIN`: integrate sample-specific inference network methods. This package now includes `SSN`, `LIONESS`, `SSPGI`, `iENA`, `CSN` and `Sweet`.
+`inteSIN`: integrate sample-specific inference network methods. This package now includes `SSN`, `LIONESS`, `SSPGI`, `iENA`, `CSN` and `Sweet`. The flowchart is below. 
 
-<img src="data/flow.png" width="500">
+<p align="center"><img src="data/flow.png" width="500"></p>
 
 Contributors
 ------------
@@ -27,6 +27,12 @@ issues are the preferred way to report bugs, ask questions, or request
 new features. You can submit issues here:
 
 <https://github.com/rusher321/inteSIN/issues>
+
+TODO
+------------
+- [ ] network visualization
+- [ ] degree matrix visualization
+- [ ] other SIN methods test on microbiome datasets (IBD; Acarbose; Infant...)
 
 Meta
 ----
