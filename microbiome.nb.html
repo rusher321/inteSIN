@@ -224,7 +224,7 @@ pre code {
 <h2>1. load data</h2>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShkYXRhLnRhYmxlKVxuZGF0IDwtIGZyZWFkKFwiZGF0YS9neXkubWV0YWRhdGEudHN2XCIsIGRhdGEudGFibGUgPSBGKVxubWljcm8gPC0gZnJlYWQoXCJkYXRhL2d5eS5tcC50c3ZcIiwgZGF0YS50YWJsZSA9IEYpXG5yb3duYW1lcyhkYXQpIDwtIGRhdFssMV1cbm1ldGFkYXRhIDwtIGRhdFssLTFdXG5jb2xuYW1lcyhtaWNybykgPC0gZ3N1YihcIi5tZXRhcGhsYW40LmFidW5kYW5jZS5wcm9maWxlXCIsIFwiXCIsIGNvbG5hbWVzKG1pY3JvKSlcbnJvd25hbWVzKG1pY3JvKSA8LSBtaWNybyRjbGFkZV9uYW1lXG5taWNybyA8LSBtaWNyb1ssLWMoMToyKV1cblxuYGBgIn0= -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShkYXRhLnRhYmxlKVxuZGF0IDwtIGZyZWFkKFwiZGF0YS9neXkubWV0YWRhdGEudHN2XCIsIGRhdGEudGFibGUgPSBGKVxubWljcm8gPC0gZnJlYWQoXCJkYXRhL2d5eS5tcC50c3ZcIiwgZGF0YS50YWJsZSA9IEYpXG5yb3duYW1lcyhkYXQpIDwtIGRhdFssMV1cbm1ldGFkYXRhIDwtIGRhdFssLTFdXG5jb2xuYW1lcyhtaWNybykgPC0gZ3N1YihcIi5tZXRhcGhsYW40LmFidW5kYW5jZS5wcm9maWxlXCIsIFwiXCIsIGNvbG5hbWVzKG1pY3JvKSlcbnJvd25hbWVzKG1pY3JvKSA8LSBtaWNybyRjbGFkZV9uYW1lXG5taWNybyA8LSBtaWNyb1ssLWMoMToyKV1cbmBgYCJ9 -->
 <pre class="r"><code>library(data.table)
 dat &lt;- fread(&quot;data/gyy.metadata.tsv&quot;, data.table = F)
 micro &lt;- fread(&quot;data/gyy.mp.tsv&quot;, data.table = F)
@@ -232,8 +232,7 @@ rownames(dat) &lt;- dat[,1]
 metadata &lt;- dat[,-1]
 colnames(micro) &lt;- gsub(&quot;.metaphlan4.abundance.profile&quot;, &quot;&quot;, colnames(micro))
 rownames(micro) &lt;- micro$clade_name
-micro &lt;- micro[,-c(1:2)]
-</code></pre>
+micro &lt;- micro[,-c(1:2)]</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
