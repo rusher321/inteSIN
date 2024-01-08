@@ -7,7 +7,7 @@ output: html_notebook
 
 ```{r, warning=F}
 library(data.table)
-dat <- fread("data/gyy.metadata.tsv", data.table = F)
+dat <- fread("data/gyy.metadata.tsv", data.table = F) # 
 micro <- fread("data/gyy.mp.tsv", data.table = F)
 rownames(dat) <- dat[,1]
 metadata <- dat[,-1]
@@ -45,9 +45,12 @@ save(sweet_res, file = "data/gyy_sweet.Rdata")
 #### 1.3.1 Comparison of SIN degree between different group 
 
 ```{r}
-sweetres <- readRDS("data/gyy_sweet.Rdata")
-cutoff <- -qnorm(0.05, mean = 0, sd = 1)
-outlist <- lapply(sweetres, function(x){x[abs(x) < cutoff] <- 0; x <- sign(x); as(x, "dgCMatrix")})
+load("data/gyy_sweet.Rdata")
+library(igraph)
+library(SpiecEasi)
+source("R/tinyFun.R")
+cutoff <- -qnorm(0.01, mean = 0, sd = 1)
+outlist <- lapply(sweet_res, function(x){x[abs(x) < cutoff] <- 0; x <- sign(x); as(x, "dgCMatrix")})
 ## degree comparision  
 netres <- .net_stat_com(outlist)
 degree_matrix <- netres$degree

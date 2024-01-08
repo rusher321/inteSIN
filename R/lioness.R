@@ -42,7 +42,7 @@ lioness <- function(matrix, n_method = .pearsonF, transF = F){
     lionessout <- lapply(lionessout, function(x){tmp <- as.matrix(x); diag(tmp) <- NA; tmp[lower.tri(tmp)] <- NA;tmp})
     lionessout <- melt(lionessout)
     colnames(lionessout) <- c("Feature_1", "Feature_2", "Rho", "Sample")
-    lionessout <- lionessout[!is.na(lionessout$Rho), ] # remove the loop and repeat edga
+    lionessout <- lionessout[!is.na(lionessout$Rho), ] # remove the loop and repeat edge
   }
   return(lionessout)
 }
