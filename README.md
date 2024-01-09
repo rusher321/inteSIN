@@ -32,7 +32,7 @@ new features. You can submit issues here:
 ------------
 - [ ] network visualization
 - [ ] degree matrix visualization
-- [ ] other SIN methods test on microbiome datasets (IBD; Antibiotic; Infant...)
+- [ ] other SIN methods test on microbiome datasets (CRC; Antibiotic; Infant...)
 
     - collect 3 CRC cohorts/1 antibiotic/ 1 longitudinal infant (bacteria or virome) cohort and preprocess.
        - the metaphlan3 profiling (XXX et al., XXX et al., ...) from  [curatedMetagenomicData](https://github.com/waldronlab/curatedMetagenomicData).
