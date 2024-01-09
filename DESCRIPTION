@@ -14,7 +14,9 @@ Imports:
   reshape,
   minet,
   SpiecEasi,
-  methods
+  methods,
+  ggplot2,
+  ggraph
 Suggests:
     ggplot2,
     testthat (>= 3.0.0)
