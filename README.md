@@ -38,7 +38,7 @@ new features. You can submit issues here:
        - the metaphlan3 profiling (XXX et al., XXX et al., ...) from  [curatedMetagenomicData](https://github.com/waldronlab/curatedMetagenomicData).
        - 🦊**low priority**:the virome profiling of infants could be generated using [Phanta](https://www.nature.com/articles/s41587-023-01799-4#additional-information) , the data is in [here](https://www.nature.com/articles/s41587-023-01799-4#additional-information).
     - comparison between biomarkers based on expression data and degree data.
-    - performance of classification, the option is [Stabl](https://www.nature.com/articles/s41587-023-02033-x), which could integrate the degree matrix and expression matrix using the data fusion.
+    - performance of classification, one option is [Stabl](https://www.nature.com/articles/s41587-023-02033-x), which could integrate the degree matrix and expression matrix using the data fusion.
     - ...
 
 Meta
