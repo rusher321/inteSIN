@@ -34,9 +34,9 @@ TODO
 - [ ] degree matrix visualization
 - [ ] other SIN methods test on microbiome datasets (IBD; Antibiotic; Infant...)
 
-    - collect 3 IBD cohorts/1 antibiotic/ 1 longitudinal infant (bacteria/virome) cohort and preprocess
+    - collect 3 CRC cohorts/1 antibiotic/ 1 longitudinal infant (bacteria/virome) cohort and preprocess
     - comparison between biomarkers based on expression data and degree data
-    - performance of classification
+    - performance of classification, the option is [Stabl](https://www.nature.com/articles/s41587-023-02033-x), which could integrate the degree matrix and expression matrix using the data fusion.
     - ...
 
 Meta
