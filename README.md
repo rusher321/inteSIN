@@ -1,8 +1,8 @@
-<img src="data/logo.png" width="600">
+<img src="data/logo.png" width="60">
 
 `inteSIN`: integrate sample-specific inference network methods. This package now includes `SSN`, `LIONESS`, `SSPGI`, `iENA`, `CSN` and `Sweet`. The flowchart is below. 
 
-<p align="center"><img src="data/flow.png" width="500"></p>
+<p align="center"><img src="data/SIN_flow.png" width="500"></p>
 
 Contributors
 ------------
@@ -32,7 +32,12 @@ TODO
 ------------
 - [ ] network visualization
 - [ ] degree matrix visualization
-- [ ] other SIN methods test on microbiome datasets (IBD; Acarbose; Infant...)
+- [ ] other SIN methods test on microbiome datasets (IBD; Antibiotic; Infant...)
+
+    - collect 3 IBD cohorts/1 antibiotic/ 1 longitudinal infant (bacteria/virome) cohort and preprocess
+    - comparison between biomarkers based on expression data and degree data
+    - performance of classification
+    - ...
 
 Meta
 ----
