@@ -16,7 +16,8 @@ Imports:
   SpiecEasi,
   methods,
   ggplot2,
-  ggraph
+  ggraph,
+  reshape2
 Suggests:
     ggplot2,
     testthat (>= 3.0.0)

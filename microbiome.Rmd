@@ -19,6 +19,9 @@ micro <- micro[,-c(1:2)]
 ### 1.1 preprocess
 
 ```{r fig.height=4, fig.width=8, warning=FALSE, paged.print=TRUE}
+library(ggplot2)
+library(RColorBrewer)
+source("R/tinyFun.R")
 # preprocess 
 datalist <- .splitMetaphlan(data = micro, prefix = "drug")
 genus <- datalist$drug_genus
@@ -26,7 +29,6 @@ genus_filter <- genus[apply(genus, 1, function(x){sum(x>0.01)>20}), ] # filter r
 genus_norm <- t(genus_filter)/colSums(genus_filter) # renorm genus 
 
 # plot the top10 genus composition 
-library(RColorBrewer)
 .topTax(t(genus_norm), K = 10, tax_colour = brewer.pal(n = 12, name = "Paired"))
 ```
 
@@ -45,7 +47,7 @@ save(sweet_res, file = "data/gyy_sweet.Rdata")
 #### 1.3.1 Comparison of SIN degree between different group 
 
 ```{r}
-load("data/gyy_sweet.Rdata")
+load("data/gyy_sweet.bp.Rdata")
 library(igraph)
 library(SpiecEasi)
 source("R/tinyFun.R")
@@ -138,4 +140,118 @@ glip_pair_res$feature2 <- unlist(lapply(rownames(glip_pair_res), function(x){ind
 glip_pair_res_sig <- glip_pair_res[glip_pair_res$sign_p.value < 0.01, ]
 pheatmap(pair_glip[, rownames(glip_pair_res_sig)], annotation_row = Glip[,'Time',drop=F],show_rownames = F)
 ```
+
+
+#------------------------------------- CSN ------------------------------------# 
+
+```{r}
+#zCompositions::cmultRepl(genus_norm, z.warning = 0.9) -> genus_norm
+psudo_count <- round(genus_norm*10^7,0)
+# pre
+csnet_res1 <- csnet(dat = t(psudo_count[rownames(acar[acar$Time == "D0", ]), ]))
+
+# post 
+csnet_res2 <- csnet(dat = t(psudo_count[rownames(acar[acar$Time != "D0", ]), ]))
+
+#save(csnet_res, file = "data/gyy_csnet.Rdata")
+append(csnet_res1, csnet_res2) -> csnet_res
+```
+
+#### 1.3.1 Comparison of SIN degree between different group 
+
+```{r}
+library(igraph)
+library(SpiecEasi)
+source("R/tinyFun.R")
+outlist <- csnet_res
+## degree comparision  
+netres <- .net_stat_com(outlist)
+degree_matrix <- netres$degree
+rownames(degree_matrix) <- colnames(psudo_count)
+```
+
+Comparison of SIN degree between pre-treatment and post-treatment in **acarbose**
+
+```{r}
+##----------------- acar -------------------------------------- ## 
+acar <- metadata[metadata$Drug == "Acarbose", ]
+library(coin)
+library(rcompanion)
+
+acar_degree_res <- .mywilcox_2t(datamatrix = t(degree_matrix), configdata = acar, group = "Time",  ID = "PID", Time = "Time")
+library(DT)
+datatable(acar_degree_res, caption = "Comparision of degree between pre-treatment and post-treatment in acarbose group") %>% formatRound(colnames(acar_degree_res)[1:10],3)
+```
+
+Comparison of SIN degree between pre-treatment and post-treatment in **glipizide**
+
+```{r}
+##---------------- glip --------------------------------------- ##
+Glip <- metadata[metadata$Drug == "Glipizide", ]
+glip_degree_res <- .mywilcox_2t(datamatrix = t(degree_matrix), configdata = Glip, group = "Time",  ID = "PID", Time = "Time")
+
+datatable(glip_degree_res, caption = "Comparision of degree between pre-treatment and post-treatment in Glipizide group") %>% formatRound(colnames(glip_degree_res)[1:10],3)
+```
+
+#### 1.3.2 Comparison of SIN degree matrix between different group 
+
+acarbose group 
+
+```{r}
+## permanova 
+acar_degree <- t(degree_matrix[,rownames(acar)])
+acar_perm <- adonis2(acar_degree~Time, data = acar, method = "jaccard")
+datatable(acar_perm)
+```
+
+glipizide group 
+
+```{r}
+glip_degree <- t(degree_matrix[,rownames(Glip)])
+glip_perm <- adonis2(glip_degree~Time, data = Glip, method = "jaccard")
+datatable(glip_perm)
+```
+
+
+#### 1.3.2 Comparison of edge between different group 
+
+acarbose group 
+
+```{r}
+## gene_pair comparision 
+library(reshape2)
+data_pair <- melt(lapply(outlist, function(x){tmp <- as.matrix(x); diag(tmp) <- NA; tmp[lower.tri(tmp)] <- NA;tmp}))
+
+data_pair <- data_pair[!is.na(data_pair[,3]),] # remove the loop and repeat edga 
+colnames(data_pair) <- c("feature1", "feature2", "edga", "sample")
+data_pair$pair <- paste0(data_pair$feature1, "_", data_pair$feature2)
+pair_data <- acast(data_pair, sample ~ pair, value.var = "edga")
+pair_data_filter <- pair_data[,apply(pair_data, 2, function(x){sum(x!=0)>20})]
+
+## acar 
+pair_acar <- pair_data_filter[rownames(acar), ]
+acar_pair_res <- .mywilcox_2t(datamatrix = pair_acar, configdata = acar, group = "Time",  ID = "PID", Time = "Time")
+bac_name <- colnames(psudo_count)
+acar_pair_res$feature1 <- unlist(lapply(rownames(acar_pair_res), function(x){index <- as.numeric(unlist(strsplit(x, split = "_"))); bac_name[index[1]]}))
+acar_pair_res$feature2 <- unlist(lapply(rownames(acar_pair_res), function(x){index <- as.numeric(unlist(strsplit(x, split = "_"))); bac_name[index[2]]}))
+
+acar_pair_res_sig <- acar_pair_res[acar_pair_res$sign_p.value < 0.01, ]
+pheatmap(pair_acar[, rownames(acar_pair_res_sig)], annotation_row = acar[,'Time',drop=F],show_rownames = F)
+```
+
+glipizide group 
+
+```{r}
+## glip 
+pair_glip <- pair_data_filter[rownames(Glip), ]
+glip_pair_res <- .mywilcox_2t(datamatrix = pair_glip, configdata = Glip, group = "Time",  ID = "PID", Time = "Time")
+glip_pair_res$feature1 <- unlist(lapply(rownames(glip_pair_res), function(x){index <- as.numeric(unlist(strsplit(x, split = "_"))); bac_name[index[1]]}))
+glip_pair_res$feature2 <- unlist(lapply(rownames(glip_pair_res), function(x){index <- as.numeric(unlist(strsplit(x, split = "_"))); bac_name[index[2]]}))
+
+glip_pair_res_sig <- glip_pair_res[glip_pair_res$sign_p.value < 0.01, ]
+pheatmap(pair_glip[, rownames(glip_pair_res_sig)], annotation_row = Glip[,'Time',drop=F],show_rownames = F)
+```
+
+
+
 

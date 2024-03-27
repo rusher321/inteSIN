@@ -19,7 +19,7 @@
 #' rownames(x) <- paste0("gene_", 1:num_genes)
 #' colnames(x) <- paste0("sample_", 1:num_samples)
 #' lioness <- lioness(t(x))
-lioness <- function(matrix, n_method = .pearsonF, transF = F){
+lioness <- function(matrix, n_method = .pearsonF, transF = F, alpha){
 
   if(!is.function(n_method)){ stop("please use a function") }
   if(!is.matrix(matrix)) { print("please use a numeric matrix as input") }
@@ -32,10 +32,15 @@ lioness <- function(matrix, n_method = .pearsonF, transF = F){
   aggNet <- n_method(matrix)
   # prepare the lioness output
   lionessout <- list()
+  lionessout_z <- list()
   # run function f and the LIONESS equation
   for(i in 1:nsamp){
     ss <- n_method(matrix[-i, ]) # apply netFun on all samples minus one
-    lionessout[[samples[i]]] <- nsamp*(aggNet - ss)+ss # apply LIONESS equation
+    sin_tmp <- nsamp*(aggNet - ss)+ss # apply LIONESS equation
+    lionessout[[samples[i]]] <- sin_tmp # apply LIONESS equation
+    # generate the zscore matrix, need to discuss
+    z_ss <- (sin_tmp-mean(sin_tmp[lower.tri(sin_tmp)]))/sd(sin_tmp[lower.tri(sin_tmp)])
+    lionessout_z[[samples[i]]] <- z_ss
   }
   if(transF){
     # use the format gene-gene-correlation-sample
@@ -43,6 +48,10 @@ lioness <- function(matrix, n_method = .pearsonF, transF = F){
     lionessout <- melt(lionessout)
     colnames(lionessout) <- c("Feature_1", "Feature_2", "Rho", "Sample")
     lionessout <- lionessout[!is.na(lionessout$Rho), ] # remove the loop and repeat edge
+  }else{
+    cutoff <- -qnorm(alpha, mean = 0, sd = 1)
+    lionessout <- lapply(lionessout_z, function(x){x[abs(x) < cutoff] <- 0; x <- sign(x); as(x, "dgCMatrix")})
+    names(lionessout) <- samples
   }
   return(lionessout)
 }

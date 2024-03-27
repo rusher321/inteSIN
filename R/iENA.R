@@ -17,7 +17,7 @@
 #' rownames(x) <- paste0("gene_", 1:num_genes)
 #' colnames(x) <- paste0("sample_", 1:num_samples)
 #' iENA_sPCC_res <- iENA_sPCC(t(x))
-iENA_sPCC <- function(dat, PID = "all", transF = F){
+iENA_sPCC <- function(dat, PID = "all", transF = F, alpha = 0.05, ref = F, refmean = NULL, refvar=NULL){
 
   if(PID != "all"){
     # remove the id not in the dat
@@ -25,9 +25,13 @@ iENA_sPCC <- function(dat, PID = "all", transF = F){
   }else{
     PID <- rownames(dat)
   }
-
-  ref_mean <- apply(dat, 2, mean)
-  ref_var <- apply(dat, 2, var)
+  if(ref){
+    ref_mean <- refmean
+    ref_var <- refvar
+  }else{
+    ref_mean <- apply(dat, 2, mean)
+    ref_var <- apply(dat, 2, var)
+  }
   n_sample <- nrow(dat)
   n_feature <- ncol(dat)
   V1 <- matrix(ref_var, n_feature, n_feature)
@@ -37,6 +41,7 @@ iENA_sPCC <- function(dat, PID = "all", transF = F){
 
   feature_id <- colnames(dat)
   sPCC <- list()
+  sPCC_z <- list()
 
   for(i in 1:length(PID)){
     Xi <- as.numeric(dat[i, ])
@@ -45,6 +50,9 @@ iENA_sPCC <- function(dat, PID = "all", transF = F){
     sPCCi <- (X1-G1)*(X2-G2)/sqrt(V1*V2) # here use the equitation for iENA paper
     rownames(sPCCi) <- colnames(sPCCi) <- feature_id
     sPCC[[PID[i]]] <- sPCCi
+    # here to generate the z-score matrix
+    z_ss <- (sPCCi-mean(sPCCi[lower.tri(sPCCi)]))/sd(sPCCi[lower.tri(sPCCi)])
+    sPCC_z[[PID[i]]] <- z_ss
   }
 
   if(transF){
@@ -53,6 +61,10 @@ iENA_sPCC <- function(dat, PID = "all", transF = F){
     sPCC <- melt(sPCC)
     colnames(sPCC) <- c("Feature_1", "Feature_2", "Rho", "Sample")
     sPCC <- sPCC[!is.na(sPCC$Rho), ]
+  }else{
+    cutoff <- -qnorm(alpha, mean = 0, sd = 1)
+    sPCC <- lapply(sPCC_z, function(x){x[abs(x) < cutoff] <- 0; x <- sign(x); as(x, "dgCMatrix")})
+    names(sPCC) <- PID
   }
   return(sPCC)
 }

@@ -12,9 +12,9 @@
 #'
 #' @return ggplot class
 #' @importFrom igraph graph_from_data_frame
-#' @importFrom  ggraph ggraph
+#' @importFrom  ggraph ggraph geom_edge_arc geom_node_point geom_node_text
 #' @import ggplot2
-#'
+#' @importFrom reshape2 melt
 #' @export
 #'
 #' @examples
@@ -25,7 +25,7 @@
 #' rownames(x) <- paste0("gene_", 1:num_genes)
 #' colnames(x) <- paste0("sample_", 1:num_samples)
 #' Sweet_res <- Sweet(t(x))
-#' netplot_sin(sweet_res$sample_1,layout = "circle", node_size = "degree", label_color = "black", edge_color = "type")
+#' netplot_sin(Sweet_res$sample_1,layout = "circle", node_size = "degree", label_color = "black", edge_color = "type")
 netplot_sin <- function(matrix, layout = "sphere", node_size = 3, node_color = "orange",
                         edge_size =1, edge_color= "gray", label_size = 3, label_color = "grey50",
                         metadata = NULL){
@@ -46,10 +46,11 @@ netplot_sin <- function(matrix, layout = "sphere", node_size = 3, node_color = "
 
   raw_plot <- ggraph(graph = net, layout = layout)
 
+  # using geom_edge_arc0 transform to curve link
   if(!is.numeric(edge_size)){
-    raw_plot <- raw_plot+geom_edge_arc(aes(size = links[, edge_size], color = links[, edge_color]))
+    raw_plot <- raw_plot+geom_edge_link0(aes(width = links[, edge_size], color = links[, edge_color]))
   }else{
-    raw_plot <- raw_plot+geom_edge_arc(edge_width = edge_size, aes(color = links[,edge_color]))
+    raw_plot <- raw_plot+geom_edge_link0(width = edge_size, aes(color = links[,edge_color]))
   }
 
   if(!is.numeric(node_size)){
@@ -65,7 +66,7 @@ netplot_sin <- function(matrix, layout = "sphere", node_size = 3, node_color = "
   tmp <- as.matrix(matrix);
   diag(tmp) <- NA;
   tmp[lower.tri(tmp)] <- NA;
-  tmp_res <- reshape2::melt(tmp)
+  tmp_res <- melt(tmp)
   colnames(tmp_res) <- c("From", "To", "Weight")
   tmp_res <- tmp_res[!is.na(tmp_res$Weight), ]
   tmp_res <- tmp_res[tmp_res$Weight !=0, ]
@@ -75,5 +76,4 @@ netplot_sin <- function(matrix, layout = "sphere", node_size = 3, node_color = "
     tmp_res$type <- ifelse(tmp_res$Weight >0, "+", "-")
     return(tmp_res)
   }
-
 }

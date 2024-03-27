@@ -1,0 +1,286 @@
+---
+title: "CRC_inteSIN"
+author: "Huahui Ren"
+date: "2024-03-15"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Introduce 
+
+Here is the test about the  classification power of CRC vs Control using sample-specific inference network methods.
+
+## Content
+
+- Part 1: Preprocessing 
+- Part 2: Comparisions in biomarkers using relative abundance or degree 
+- Part 3: Comparision in classifical performance 
+
+## Part 1: 
+
+```{r , message=FALSE, warning=F}
+library(tidyverse)
+
+crc_data <- readRDS("data/crc_infan.rds")
+Yachi_meta <- crc_data$Yachidas_meta[[2]]  %>% as.data.frame() %>% mutate(id = rownames(.))
+Yuj_meta <- crc_data$yuj_meta[[2]] %>% as.data.frame() %>% mutate(id = rownames(.))
+Wir_meta <- crc_data$WirbelJ_meta[[2]]  %>% as.data.frame() %>% mutate(id = rownames(.))
+
+crc_meta <- Yachi_meta %>%
+  full_join(Yuj_meta, by = "id") %>%
+  full_join(Wir_meta, by = "id") %>% column_to_rownames(var = "id")
+crc_meta[is.na(crc_meta)] <- 0
+
+library(rmeta)
+crc_meta_f <- filterPer(crc_meta, row = 1, percent = 0.2) |> t() |> renorm()
+crc_phe <- do.call("rbind", list(crc_data$Yachidas_meta[[1]], crc_data$yuj_meta[[1]], crc_data$WirbelJ_meta[[1]]))
+
+crc_phe_f <- crc_phe |> filter(disease == "CRC" | disease == "healthy") 
+rownames(crc_phe_f) <- crc_phe_f$sample_id
+crc_meta_f <- crc_meta_f[rownames(crc_phe_f), ]
+
+library(gtsummary)
+
+crc_phe_f |> select(study_name, disease, age, gender, BMI) |> tbl_summary(by = study_name) |> add_p() |>
+  add_overall() |>
+  bold_labels()
+
+```
+
+## Part 2: 
+
+### Overview of core species in 3 crc cohort 
+
+*1.* WirbelJ_2018
+
+```{r, message=F, error=F, warning=F}
+library(RColorBrewer)
+prevalences <- seq(0.05, 1, 0.05)
+detections <- 10^seq(log10(1e-3), log10(.2), length = 10)
+
+core_tax_plot <- function(dat, colors = gray(seq(0, 1, length=5)), prevalences, detections, min.prevalence, top){
+  preva_tax <- names(which(apply(dat, 2, function(x){sum(x!=0)/length(x)}) > min.prevalence))
+  median_tax <- names(sort(apply(dat, 2, median, na.rm = T), decreasing = T))[1:top] -> toptax
+  retain_tax <- intersect(median_tax, preva_tax)
+  dat_retain <- dat[, retain_tax]
+  
+  res_list <- lapply(detections, function(x){tmp <- dat_retain; tmp[dat_retain < x] <- 0; 
+            pre <- apply(tmp,2,function(x){sum(x!=0)/length(x)});
+            out <- data.frame(tax = retain_tax, prevalence = pre, cutoff = x)})
+  
+  qdat <- as.data.frame(do.call("rbind", res_list))
+  qdat$tax <- factor(qdat$tax, levels = rev(retain_tax))
+  qdat$cutoff <- paste0(round(qdat$cutoff*100, 3), "%")
+  qdat$cutoff <- factor(qdat$cutoff, levels = paste0(round(detections*100, 3), "%"))
+  
+  p <- ggplot(qdat, aes(cutoff, tax, fill= prevalence)) + 
+    geom_tile()+theme_bw()+theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+    scale_fill_gradient(low = colors[1], high = colors[5])
+  
+  return(p)
+}
+
+WirbelJ_2018_meta <- crc_meta_f[crc_phe_f$study_name == "WirbelJ_2018", ]
+
+core_tax_plot(dat = WirbelJ_2018_meta, 
+                          prevalences = prevalences, 
+                          detections = detections, 
+                          min.prevalence = 0.5, top = 30)+
+  xlab("Detection Threshold (Relative Abundance (%))") +
+  theme(axis.text.y = element_text(face="italic"))
+
+```
+
+## 
+
+*2.* YachidaS_2019
+
+```{r}
+YachidaS_2019_meta <- crc_meta_f[crc_phe_f$study_name == "YachidaS_2019", ]
+
+core_tax_plot(dat = YachidaS_2019_meta , 
+                          prevalences = prevalences, 
+                          detections = detections, 
+                          min.prevalence = 0.5, top = 30)+
+  xlab("Detection Threshold (Relative Abundance (%))") +
+  theme(axis.text.y = element_text(face="italic"))
+```
+
+## 
+
+*3.* YuJ_2015
+
+```{r}
+YuJ_2015_meta <- crc_meta_f[crc_phe_f$study_name == "YuJ_2015", ]
+
+core_tax_plot(dat = YuJ_2015_meta , 
+                          prevalences = prevalences, 
+                          detections = detections, 
+                          min.prevalence = 0.5, top = 30)+
+  xlab("Detection Threshold (Relative Abundance (%))") +
+  theme(axis.text.y = element_text(face="italic"))
+```
+
+## 
+
+### Compare crc vs healthy using relative abundance  
+
+```{r dplyr, warning=F, message=F}
+library(coin)
+source("R/tinyFun.R")
+#first try to clr or alr transformation 
+crc_meta_clr <- robCompositions::cenLR(zCompositions::cmultRepl(crc_meta_f))[[1]]
+crc_phe_list <- crc_phe_f |> dplyr::select(disease, study_name) |> base::split(f = crc_phe_f$study_name) 
+
+res_wirbe <- .wilcox_all(crc_meta_clr, crc_phe_list$WirbelJ_2018)
+res_yujun <- .wilcox_all(crc_meta_clr, crc_phe_list$YuJ_2015)
+res_yachi <- .wilcox_all(crc_meta_clr, crc_phe_list$YachidaS_2019)
+
+qdat <- data.frame(wirbe = res_wirbe$z_score, yujun = res_yujun$z_score, 
+                   yachi = res_yachi$z_score, row.names = rownames(res_wirbe))
+
+qdat_p <- data.frame(wirbe = res_wirbe$p.adjust, yujun = res_yujun$p.adjust, 
+                   yachi = res_yachi$p.adjust, row.names = rownames(res_wirbe))
+
+qdat_p_f <- qdat_p[apply(qdat_p, 1, function(x){any(x < 0.05)}), ]
+qdat_p_f <- ifelse(qdat_p_f<0.05, 1, 0)
+qdat_f <- qdat[rownames(qdat_p_f), ]
+sigature <- sign(qdat_f)*qdat_p_f
+qdat_p_num <- ifelse(sigature == 0, "", ifelse(sigature == 1, "+", "-") )
+
+pheatmap::pheatmap(t(qdat_f), display_numbers = t(qdat_p_num), fontsize_number = 12)
+
+```
+
+## SIN based On spearman 
+
+### Compute the SIN 
+
+```{r, warning=F, message=F}
+library(igraph)
+library(SpiecEasi)
+
+datlist <- split(crc_meta_clr[rownames(crc_phe_f), ], crc_phe_f$study_name)
+phelist <- crc_phe_list
+
+datlist2 <- split(as.data.frame(t(crc_meta[colnames(crc_meta_clr),rownames(crc_phe_f)]*10^7)), crc_phe_f$study_name)
+
+
+# sweet 
+sweet_list <- lapply(1:3, function(i){intnet_com(dat = datlist[[i]], phe = phelist[[i]], ref = T)})
+names(sweet_list) <- names(crc_phe_list)
+# ssn
+ssn_list <- lapply(1:3, function(i){intnet_com(dat = datlist[[i]], phe = phelist[[i]], method = "ssn",ref = T)})
+names(ssn_list) <- names(crc_phe_list)
+# lioness 
+lioness_list <- lapply(1:3, function(i){intnet_com(dat = datlist[[i]], phe = phelist[[i]], method = "lioness",ref = T)})
+names(lioness_list) <- names(crc_phe_list)
+# iENA 
+iENA_list <- lapply(1:3, function(i){intnet_com(dat = datlist[[i]], phe = phelist[[i]], method = "iENA",ref = T)})
+names(iENA_list) <- names(crc_phe_list)
+# cenet 
+# 这里使用
+csnet_list <- lapply(1:3, function(i){intnet_com(dat = datlist2[[i]], phe = phelist[[i]], method = "csnet",ref = F, boxsize = 0.2)})
+names(csnet_list) <- names(crc_phe_list)
+
+View(cbind(res_wirbe_degree[rownames(res_yachi), ], res_yachi))
+
+```
+
+## SIN based On sparcc 
+
+```{r, warning=F, message=F}
+# sweet 
+sweet_list_sparcc <- lapply(1:3, function(i){intnet_com(dat = datlist2[[i]], phe = phelist[[i]], ref = F, n_method = .sparccF)})
+names(sweet_list_sparcc) <- names(crc_phe_list)
+# ssn
+ssn_list_sparcc <- lapply(1:3, function(i){intnet_com(dat = datlist2[[i]], phe = phelist[[i]], method = "ssn",ref = F, n_method = .sparccF)})
+names(ssn_list_sparcc) <- names(crc_phe_list)
+# lioness 
+lioness_list_sparcc <- lapply(1:3, function(i){intnet_com(dat = datlist2[[i]], phe = phelist[[i]], method = "lioness",ref = F, n_method = .sparccF)})
+names(lioness_list_sparcc) <- names(crc_phe_list)
+# iENA 
+iENA_list_sparcc <- lapply(1:3, function(i){intnet_com(dat = datlist2[[i]], phe = phelist[[i]], method = "iENA",ref = F)})
+names(iENA_list_sparcc) <- names(crc_phe_list)
+
+
+View(cbind(res_wirbe_degree[rownames(res_yachi), ], res_yachi))
+
+```
+
+
+
+
+```{r}
+intnet_com  <- function(dat, phe, method = "sweet", n_method = .spearmanF, ref=F, ...){
+  # filter 
+  
+  if(method == "sweet"){
+    sweet_res <- Sweet(dat = dat, s_method = .spearmanF, n_method = n_method)
+    netres <- .net_stat_com(sweet_res)
+  }else if(method == "ssn"){
+    ssn_res <- ssn(matrix = dat,  n_method = n_method, transF = F)
+    netres <- .net_stat_com(ssn_res)  
+  }else if(method == "lioness"){
+    lioness_res <- lioness(matrix = dat,  n_method = n_method, transF = F, alpha = 0.05)
+    netres <- .net_stat_com(lioness_res) 
+  }else if(method == "iENA"){
+    if(ref){
+      h_id <- rownames(phe[phe$disease == "healthy", ])
+      healthy <- dat[h_id, ]
+      ref_mean <- apply(healthy, 2, mean)
+      ref_var <- apply(healthy, 2, var)
+      iENA_res <- iENA_sPCC(dat  = dat, transF = F, ref = T, refmean = ref_mean, refvar = ref_var)
+    }else{
+      iENA_res <- iENA_sPCC(dat  = dat, transF = F, ref = F)
+    }
+      netres <- .net_stat_com(iENA_res) 
+  }else if(method == "csnet"){
+    if(ref){
+      h_id <- rownames(phe[phe$disease == "healthy", ])
+      healthy <- dat[h_id, ]
+      nh_id <- rownames(phe[phe$disease != "healthy", ])
+      nhealthy <- dat[nh_id, ]
+      csnet_res_h <-  csnet(dat  =  t(healthy))
+      csnet_res_nh <-  csnet(dat  =  t(nhealthy))
+      netres_h <- .net_stat_com(csnet_res_h)
+      netres_nh <- .net_stat_com(csnet_res_nh)
+      netres <- list(edge_number = rbind(netres_h$edge_number, netres_nh$edge_number),
+                     degree = cbind(netres_h$degree, netres_nh$degree),
+                     betweeness = cbind(netres_h$betweeness, netres_nh$betweeness),
+                     closeness = cbind(netres_h$closeness, netres_nh$closeness))
+    }else{
+      csnet_res <- csnet(dat  =  t(dat), ...)
+      netres <- .net_stat_com(csnet_res)
+    }
+  }
+  # degree 
+  degree_matrix <- t(netres$degree)
+  res_degree <- .wilcox_all(degree_matrix, phe)
+  # betweeness 
+  betweeness_matrix <- t(netres$betweeness)
+  res_betweeness <- .wilcox_all(betweeness_matrix, phe)  
+  # closeness 
+  closeness_matrix <- t(netres$closeness)
+  closeness_matrix[is.na(closeness_matrix)] <- 0
+  res_closeness <- .wilcox_all(closeness_matrix, phe)   
+  # edge compare 
+  id <- intersect(rownames(netres$edge_number), rownames(phe))
+  edge_dat <- data.frame(netres$edge_number[id, ], phe[id, ])
+  qdat <- melt(edge_dat)
+  com_plot <- grouped_ggbetweenstats(data = qdat, x = disease, y = value, grouping.var = variable, bf.message = F)
+  # output 
+  outlist <- list(res_degree, res_betweeness, res_closeness, com_plot)
+  names(outlist) <- c("degree", "betweeness", "closeness", "edge")
+  return(outlist)
+}
+  
+```
+
+
+
+
+

@@ -8,7 +8,7 @@
 #'
 #' @importFrom reshape melt
 #' @importFrom stats cor pnorm sd
-#' @references Liu X, Wang Y, Ji H, Aihara K, Chen L. Personalized characterization of diseases using sample-specific networks. Nucleic Acids Res. 2016 Dec 15;44(22):e164. doi: 10.1093/nar/gkw772 Add to Citavi project by DOI. Epub 2016 Sep 4. PMID: 27596597 Add to Citavi project by Pubmed ID; PMCID: PMC5159538.
+#' @references Liu X, Wang Y, Ji H, Aihara K, Chen L. Personalized characterization of diseases using sample-specific networks. Nucleic Acids Res. 2016 Dec 15;44(22):e164. doi: 10.1093/nar/gkw772
 #'
 #' @export
 #'
@@ -19,8 +19,8 @@
 #' x <- as.data.frame(gene_matrix )
 #' rownames(x) <- paste0("gene_", 1:num_genes)
 #' colnames(x) <- paste0("sample_", 1:num_samples)
-#' ssn <- ssn(t(x))
-ssn <- function(matrix, n_method = .pearsonF, transF = F){
+#' ssn_res <- ssn(t(x))
+ssn <- function(matrix, n_method = .pearsonF, transF = F, alpha = 0.05){
 
   if(!is.function(n_method)){ stop("please use a function") }
   if(!is.matrix(matrix)) { print("please use a numeric matrix as input") }
@@ -44,8 +44,9 @@ ssn <- function(matrix, n_method = .pearsonF, transF = F){
     ssout_z[[samples[i]]] <- z_ss
     ssout_p[[samples[i]]] <- p_ss
   }
-  ssout <- list(ssout_z, ssout_p)
-  names(ssout) <- c("Z_score", "Pvalue")
+
+  #ssout <- list(ssout_z, ssout_p)
+  #names(ssout) <- c("Z_score", "Pvalue")
 
   if(transF){
     # use the format gene-gene-correlation-sample
@@ -55,6 +56,10 @@ ssn <- function(matrix, n_method = .pearsonF, transF = F){
     colnames(ssout) <- c("Feature_1", "Feature_2", "Z_score", "Sample")
     ssout$Pvalue <- ssout_p[,3]
     ssout <- ssout[!is.na(ssout$Z_score), ] # remove the loop and repeat edga
+  }else{
+    cutoff <- -qnorm(alpha, mean = 0, sd = 1)
+    ssout <- lapply(ssout_z, function(x){x[abs(x) < cutoff] <- 0; x <- sign(x); as(x, "dgCMatrix")})
+    names(ssout) <- samples
   }
   return(ssout)
 }

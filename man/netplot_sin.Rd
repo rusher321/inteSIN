@@ -49,5 +49,5 @@ x <- as.data.frame(gene_matrix )
 rownames(x) <- paste0("gene_", 1:num_genes)
 colnames(x) <- paste0("sample_", 1:num_samples)
 Sweet_res <- Sweet(t(x))
-netplot_sin(sweet_res$sample_1,layout = "circle", node_size = "degree", label_color = "black", edge_color = "type")
+netplot_sin(Sweet_res$sample_1,layout = "circle", node_size = "degree", label_color = "black", edge_color = "type")
 }

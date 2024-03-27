@@ -1,0 +1,104 @@
+---
+title: "Generate_mp3_data"
+output: html_notebook
+---
+
+## 0. load pulic data 
+
+### load package 
+
+```{r, warning=FALSE}
+suppressPackageStartupMessages({
+  library(table1)
+  library(DT)
+  library(curatedMetagenomicData)
+  library(dplyr)
+})
+
+```
+
+### 0.1 select the CRC cohort 
+
+```{r}
+crc_subset <- filter(sampleMetadata, study_condition == "CRC") 
+table1::table1( ~ disease + disease_subtype + age + gender + country + study_name,
+                data = crc_subset)
+```
+
+
+
+### 0.2 download the data from 3 CRC cohorts: **YachidaS_2019**, **YuJ_2015** and **WirbelJ_2018** and infant cohort
+
+#### 0.21 YachidaS_2019
+ 
+```{r, warning=F}
+Yachidas_mp3 <- curatedMetagenomicData("2021-10-14.YachidaS_2019.relative_abundance", dryrun = F, counts = F, rownames = "short")
+```
+
+sample information 
+```{r}
+Yachidas_mp3_pro <- assay(Yachidas_mp3$`2021-10-14.YachidaS_2019.relative_abundance`)
+Yachidas_meta <- sampleMetadata[sampleMetadata$study_name == "YachidaS_2019", ]
+table1::table1( ~ disease + age +age_category + gender + BMI,
+                data = Yachidas_meta)
+
+rownames(Yachidas_meta) <- Yachidas_meta$sample_id
+Yachidas_meta <- Yachidas_meta[Yachidas_meta$disease]
+
+```
+
+
+#### 0.22 YuJ_2015
+```{r}
+yuj_mp3 <- curatedMetagenomicData("YuJ_2015.relative_abundance", dryrun = F, counts = F, rownames = "short")
+
+yuj_mp3_pro <- assay(yuj_mp3$`2021-03-31.YuJ_2015.relative_abundance`)
+
+yuj_meta <- sampleMetadata[sampleMetadata$study_name == "YuJ_2015", ]
+
+table1::table1( ~ disease + age +age_category + gender + BMI,
+                data = yuj_meta)
+```
+
+
+#### 0.23 WirbelJ_2018
+```{r}
+WirbelJ_mp3 <- curatedMetagenomicData("WirbelJ_2018.relative_abundance", dryrun = F, counts = F, rownames = "short")
+
+WirbelJ_mp3_pro <- assay(WirbelJ_mp3$`2021-03-31.WirbelJ_2018.relative_abundance`)
+
+WirbelJ_meta <- sampleMetadata[sampleMetadata$study_name == "WirbelJ_2018", ]
+
+table1::table1( ~ disease + age +age_category + gender + BMI,
+                data = WirbelJ_meta)
+```
+
+
+#### download infant cohort 
+
+```{r}
+infant_mp3 <- curatedMetagenomicData("ShaoY_2019.relative_abundance", dryrun = F, counts = F, rownames = "short")
+infant_mp3_pro <- assay(infant_mp3$`2021-03-31.ShaoY_2019.relative_abundance`)
+
+infant_meta <- sampleMetadata[sampleMetadata$study_name == "ShaoY_2019", ]
+
+table1::table1( ~ disease + age +age_category + gender + BMI,
+                data = infant_meta)
+
+```
+
+## 1. preprocess 
+
+```{r}
+outdata <- list(list(Yachidas_meta, Yachidas_mp3_pro), list(yuj_meta, yuj_mp3_pro), list(WirbelJ_meta, WirbelJ_mp3_pro), list(infant_meta, infant_mp3_pro))
+names(outdata) <- c("Yachidas_meta", "yuj_meta", "WirbelJ_meta", "infant_meta")
+saveRDS(outdata, "data/crc_infan.rds")
+
+```
+
+
+## seesion
+
+```{r}
+sessionInfo()
+```

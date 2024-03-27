@@ -30,8 +30,10 @@ csnet <- function(data, c = NULL, alpha = 0.01, boxsize = 0.1, weighted = FALSE)
   sid <- colnames(data)
   gid <- rownames(data)
   # If c is not provided, construct the CSNs for all cells
+  print("need to all the element is greater or equal zero!!")
+  data <- data+min(data)
   if (is.null(c)) {
-    c <- seq_len(ncol(data))
+    c <- 1:ncol(data)
   }
 
   # Default values
@@ -50,17 +52,18 @@ csnet <- function(data, c = NULL, alpha = 0.01, boxsize = 0.1, weighted = FALSE)
 
   # Define the neighborhood for each plot
   upper <- lower <- matrix(0, n1, n2)
-  for(i in seq_len(n1)){
+  for(i in 1:n1){
     s1 <- sort(data[i, ])
     s2 <- order(data[i, ])
-    n3 <- n2 - sum(sign(s1))
-    h <- round(boxsize/2 * sum(sign(s1)))
+    n3 <- n2 - sum(s1 > 0)  #
+    h <- round(boxsize/2 * sum(s1 > 0)) #
     k <- 1
     while(k <= n2){
       s = 0
-      while(k + s + 1 <= n2 && s1[k + s + 1] == s1[k]){
+      while(k + s + 1 <= n2 && s1[k + s + 1] == s1[k]){ # 判断是否相同
          s = s+1
       }
+      # 确定上下界
       if(s >= h){
         upper[i, s2[k:(k + s)]] <- data[i, s2[k]]
         lower[i, s2[k:(k + s)]] <- data[i, s2[k]]
@@ -81,8 +84,8 @@ csnet <- function(data, c = NULL, alpha = 0.01, boxsize = 0.1, weighted = FALSE)
   #csndm <- matrix(NA, nrow = n1, ncol = n2)
 
   for(k in c){
-    for(j in seq_len(n2)){
-      B[, j] <- data[, j] <= upper[, k] & data[, j] >= lower[, k]
+    for(j in 1:n2){
+      B[, j] <- data[, j] < upper[, k] & data[, j] > lower[, k]
     }
     a <- rowSums(B)
     d <- (crossprod(t(B), t(B)) * n2 - outer(a, a)) / sqrt(outer(a, a) * ((n2 - a) %*% t(n2 - a)) / (n2 - 1) + .Machine$double.eps)
