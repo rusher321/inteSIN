@@ -30,6 +30,7 @@ new features. You can submit issues here:
 
 🥶 TODO
 ------------
+- [ ] DNB function
 - [ ] network visualization
 - [ ] degree matrix visualization
 - [ ] other SIN methods test on microbiome datasets (CRC; Antibiotic; Infant...)
