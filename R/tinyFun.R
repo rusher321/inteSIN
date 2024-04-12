@@ -86,6 +86,9 @@
 .net_stat <- function(net_adj){
 
   cor_matrix <- as.matrix(net_adj)
+  #cor_matrix[is.na(cor_matrix)] <- 0 # if all value of specific feature equal 0
+  #net_adj <- sparsematrix_from_matrix(net_adj)
+
   feature_name <- rownames(cor_matrix)
   # compute the degree between closeness
   edge_pos <-   sum(cor_matrix[lower.tri(cor_matrix)] == 1)
@@ -93,7 +96,9 @@
 
   net_adj <- adj2igraph(net_adj)
   degree_n <-    data.frame(degree = igraph::degree(net_adj), row.names = feature_name)
-  E(net_adj)$weight <- abs(E(net_adj)$weight) # translate weight to postive
+  if(sum(degree_n$degree) != 0){
+    E(net_adj)$weight <- abs(E(net_adj)$weight) # translate weight to postive
+  }
   betwenness_n <- data.frame(betweeness = igraph::betweenness(net_adj), row.names= feature_name)
   closeness_n <- data.frame(closeness = igraph::closeness(net_adj), row.names = feature_name)
   out <- list(edge_pos, edge_neg, degree_n, betwenness_n,
@@ -322,3 +327,165 @@
 
 }
 
+intnet_com  <- function(dat, phe, method = "sweet", n_method = .spearmanF, ref=F, ...){
+  # filter
+  dat <- filterPer(dat, row = 2, percent = 0.1)
+  if(method == "sweet"){
+    sweet_res <- Sweet(dat = dat, s_method = .spearmanF, n_method = n_method, ...)
+    netres <- .net_stat_com(sweet_res)
+  }else if(method == "ssn"){
+    ssn_res <- ssn(matrix = dat,  n_method = n_method, transF = F)
+    netres <- .net_stat_com(ssn_res)
+  }else if(method == "lioness"){
+    lioness_res <- lioness(matrix = dat,  n_method = n_method, transF = F, alpha = 0.05)
+    netres <- .net_stat_com(lioness_res)
+  }else if(method == "iENA"){
+    if(ref){
+      h_id <- rownames(phe[phe$disease == "healthy", ])
+      healthy <- dat[h_id, ]
+      ref_mean <- apply(healthy, 2, mean)
+      ref_var <- apply(healthy, 2, var)
+      iENA_res <- iENA_sPCC(dat  = dat, transF = F, ref = T, refmean = ref_mean, refvar = ref_var)
+    }else{
+      iENA_res <- iENA_sPCC(dat  = dat, transF = F, ref = F)
+    }
+    netres <- .net_stat_com(iENA_res)
+  }else if(method == "csnet"){
+    if(ref){
+      h_id <- rownames(phe[phe$disease == "healthy", ])
+      healthy <- dat[h_id, ]
+      nh_id <- rownames(phe[phe$disease != "healthy", ])
+      nhealthy <- dat[nh_id, ]
+      csnet_res_h <-  csnet(dat  =  t(healthy))
+      csnet_res_nh <-  csnet(dat  =  t(nhealthy))
+      netres_h <- .net_stat_com(csnet_res_h)
+      netres_nh <- .net_stat_com(csnet_res_nh)
+      netres <- list(edge_number = rbind(netres_h$edge_number, netres_nh$edge_number),
+                     degree = cbind(netres_h$degree, netres_nh$degree),
+                     betweeness = cbind(netres_h$betweeness, netres_nh$betweeness),
+                     closeness = cbind(netres_h$closeness, netres_nh$closeness))
+    }else{
+      csnet_res <- csnet(dat  =  t(dat), ...)
+      netres <- .net_stat_com(csnet_res)
+    }
+  }else if(method == "sspg"){
+    if(ref){
+      h_id <- rownames(phe[phe$disease == "healthy", ])
+      sspg <- sspg(dat = dat, normalid = h_id,  transF = T, alpha = 0.05)
+    }else{
+      sspg <- sspg(dat = dat, transF = T)
+    }
+    netres <- .net_stat_com(netlist = sspg)
+  }
+  # degree
+  degree_matrix <- t(netres$degree)
+  res_degree <- .wilcox_all(degree_matrix, phe)
+  # betweeness
+  betweeness_matrix <- t(netres$betweeness)
+  res_betweeness <- .wilcox_all(betweeness_matrix, phe)
+  # closeness
+  closeness_matrix <- t(netres$closeness)
+  closeness_matrix[is.na(closeness_matrix)] <- 0
+  res_closeness <- .wilcox_all(closeness_matrix, phe)
+  # edge compare
+  id <- intersect(rownames(netres$edge_number), rownames(phe))
+  edge_dat <- data.frame(netres$edge_number[id, ], phe[id, ])
+  qdat <- melt(edge_dat)
+  com_plot <- grouped_ggbetweenstats(data = qdat, x = disease, y = value, grouping.var = variable, bf.message = F)
+  # output
+  outlist <- list(res_degree, res_betweeness, res_closeness, com_plot)
+  names(outlist) <- c("degree", "betweeness", "closeness", "edge")
+  return(outlist)
+}
+
+
+ggPCoA <- function(data, group, pc = 12,
+                   level = 0.68,
+                   p.value = TRUE, color){
+  dis <- vegan::vegdist(data, method = "bray")
+  pcoa <- ape::pcoa(dis, correction = "none", rn = NULL)
+  eig <- round(100*pcoa$values[1:3, 2], 2)
+  site <- pcoa$vectors[, 1:3]
+  data$group <- group
+  p.v <- vegan::adonis(data[,-ncol(data)]~group,
+                       data = data)$aov.tab$`Pr(>F)`[1]
+  if(all(rownames(site) == rownames(data))){
+    pca.data <- data.frame(group = data$group, site)
+    colnames(pca.data)[2:4] <- paste0("PCoA", 1:3)
+  }
+  label <- data.frame(min = apply(pca.data[, 2:4], 2, min),
+                      max = apply(pca.data[, 2:4], 2, max))
+  label$mean <- (label$min + label$max)/2
+  if (pc == 12) {
+    x <- "PCoA1"
+    y <- "PCoA2"
+    x.posi <- label[1, 3]
+    y.posi <- label[2, 2]
+    x.lab <- paste0(x, ": ", eig[1], "%")
+    y.lab <- paste0(y, ": ", eig[2], "%")
+  }else if (pc == 13) {
+    x <- "PCoA1"
+    y <- "PCoA3"
+    x.posi <- label[1, 3]
+    y.posi <- label[3, 2]
+    x.lab <- paste0(x, ": ", eig[1], "%")
+    y.lab <- paste0(y, ": ", eig[3], "%")
+  }else if (pc == 23) {
+    x <- "PCoA2"
+    y <- "PCoA3"
+    x.posi <- label[2, 3]
+    y.posi <- label[3, 2]
+    x.lab <- paste0(x, ": ", eig[2], "%")
+    y.lab <- paste0(y, ": ", eig[3], "%")
+  }
+  p <- ggplot(data = pca.data,
+              aes_string(x = x, y = y, color = "group")) +
+    geom_point(aes(color = group),
+               size = 1.5, alpha = 1) +
+    stat_ellipse(level = level,  linetype = 3,
+                 geom = "polygon", alpha = 0.02,
+                 aes(color = group), show.legend = FALSE) +
+    xlab(x.lab) + ylab(y.lab)+scale_color_manual(values = color)
+  if (p.value) {
+    p <- p +
+      annotate(geom = "text", x = x.posi, y = y.posi*1.25,
+               label = paste0("adonis: p.value =  ", p.v),
+               size = 4.5, fontface = "bold.italic",
+               colour = ifelse(p.v < 0.05, "#EE99C2", "black"))
+  }
+  p <- p + theme(panel.grid = element_line(color = 'gray90', size = 0.1),
+                 panel.background = element_rect(color = 'gray60',
+                                                 fill = 'transparent', size = 1),
+                 axis.text = element_text(size = 12, face = "bold", color = "black"),
+                 axis.text.x = element_text(colour = "black", size = 12, face = "bold"),
+                 axis.title = element_text(size = 12, face = "bold"),
+                 legend.text = element_text(size = 10, face = "bold"),
+                 legend.title = element_blank(),
+                 legend.position = "right",
+                 panel.border = element_rect(colour = "black", fill = "transparent"),
+                 legend.background = element_rect(fill = "transparent"),
+                 legend.key = element_rect(fill = "transparent"))
+  return(p)
+}
+
+core_tax_plot <- function(dat, colors = gray(seq(0, 1, length=5)), prevalences, detections, min.prevalence, top){
+  preva_tax <- names(which(apply(dat, 2, function(x){sum(x!=0)/length(x)}) > min.prevalence))
+  median_tax <- names(sort(apply(dat, 2, median, na.rm = T), decreasing = T))[1:top] -> toptax
+  retain_tax <- intersect(median_tax, preva_tax)
+  dat_retain <- dat[, retain_tax]
+
+  res_list <- lapply(detections, function(x){tmp <- dat_retain; tmp[dat_retain < x] <- 0;
+  pre <- apply(tmp,2,function(x){sum(x!=0)/length(x)});
+  out <- data.frame(tax = retain_tax, prevalence = pre, cutoff = x)})
+
+  qdat <- as.data.frame(do.call("rbind", res_list))
+  qdat$tax <- factor(qdat$tax, levels = rev(retain_tax))
+  qdat$cutoff <- paste0(round(qdat$cutoff*100, 3), "%")
+  qdat$cutoff <- factor(qdat$cutoff, levels = paste0(round(detections*100, 3), "%"))
+
+  p <- ggplot(qdat, aes(cutoff, tax, fill= prevalence)) +
+    geom_tile()+theme_bw()+theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+    scale_fill_gradient(low = colors[1], high = colors[5])
+
+  return(p)
+}

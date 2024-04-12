@@ -3,7 +3,8 @@
 #' @param matrix, row is gene/species, col is smaple/cell
 #' @param n_method, function correlation method for feature-feature
 #' @param transF, list output or matrix
-#'
+#' @param alpha, significant cutoff, default =0.05
+#' @param dat_ref, matrix of the reference dataset
 #' @importFrom reshape melt
 #'
 #' @references
@@ -19,10 +20,8 @@
 #' rownames(x) <- paste0("gene_", 1:num_genes)
 #' colnames(x) <- paste0("sample_", 1:num_samples)
 #' lioness <- lioness(t(x))
-lioness <- function(matrix, n_method = .pearsonF, transF = F, alpha){
+lioness <- function(matrix, n_method = .pearsonF, transF = F, alpha, dat_ref = NULL){
 
-  if(!is.function(n_method)){ stop("please use a function") }
-  if(!is.matrix(matrix)) { print("please use a numeric matrix as input") }
   cat("row is sample and colmun is feature!\n")
   cat("n_method need to be one of .pearsonF, .spearmanF, .kendallF and .sparccF!\n")
 
@@ -35,11 +34,18 @@ lioness <- function(matrix, n_method = .pearsonF, transF = F, alpha){
   lionessout_z <- list()
   # run function f and the LIONESS equation
   for(i in 1:nsamp){
-    ss <- n_method(matrix[-i, ]) # apply netFun on all samples minus one
-    sin_tmp <- nsamp*(aggNet - ss)+ss # apply LIONESS equation
+
+    if(is.null(dat_ref)){
+      ss <- n_method(matrix[-i, ]) # apply netFun on all samples minus one
+      sin_tmp <- nsamp*(aggNet - ss)+ss # apply LIONESS equation
+    }else{
+      ss <- n_method(dat_ref)
+      aggNet_tmp <- n_method(rbind(matrix[i,], dat_ref))
+      sin_tmp <- nsamp*(aggNet - ss)+ss
+    }
     lionessout[[samples[i]]] <- sin_tmp # apply LIONESS equation
-    # generate the zscore matrix, need to discuss
-    z_ss <- (sin_tmp-mean(sin_tmp[lower.tri(sin_tmp)]))/sd(sin_tmp[lower.tri(sin_tmp)])
+    # generate the z-score matrix, need to discuss
+    z_ss <- (sin_tmp - mean(sin_tmp[lower.tri(sin_tmp)]))/sd(sin_tmp[lower.tri(sin_tmp)])
     lionessout_z[[samples[i]]] <- z_ss
   }
   if(transF){

@@ -1,12 +1,13 @@
 #' Sample-specific weighted correlation network
 #'
-#' @param dat, row is gene/species, col is smaple/cell
+#' @param dat, row is gene/species, col is sample/cell
 #' @param s_method, function correlation method for sample-sample
 #' @param n_method, function correlation method for feature-feature
-#' @param balance, numeric,
+#' @param balance, numeric
 #' @param PID, sample id for specific or all
 #' @param alpha, significant cutoff
-#' @param out_z, logistic, F = output is zscore matrix, T = adj matrix
+#' @param out_z, logistic, F = output is z-score matrix, T = adjacent matrix
+#' @param dat_ref, matrix of the reference dataset
 #' @return outlist, a list including specific network
 #' @export
 #' @references
@@ -20,7 +21,8 @@
 #' colnames(x) <- paste0("sample_", 1:num_samples)
 #' sweet_res <- Sweet(t(x))
 
-Sweet <- function(dat, s_method = .pearsonF, n_method = .pearsonF, balance = 0.1, PID = "all", alpha = 0.05, out_z = F){
+Sweet <- function(dat, s_method = .pearsonF, n_method = .pearsonF, balance = 0.1,
+                  PID = "all", alpha = 0.05, out_z = F, dat_ref=NULL){
 
   # calculate the weight
   cat("row is sample and colmun is feature!\n")
@@ -31,26 +33,38 @@ Sweet <- function(dat, s_method = .pearsonF, n_method = .pearsonF, balance = 0.1
   value <- (apply(corM, 1, sum)-1)/(pat_N-1)
   rmax <- max(value)
   rmin <- min(value)
-  diff <- rmax - rmin +0.01
-  value <- (value - rmin+0.01)/diff
+  diff <- rmax - rmin +0.001
+  value <- (value - rmin+0.001)/diff
   value <- value * balance * pat_N
   value_d <- data.frame(weight = value, row.names = rownames(dat))
 
   # calculate the coefficient of raw edge for each sample
   # remove feature with sd =0
   dat <- dat[, apply(dat, 2, sd)!=0]
-  corN <- n_method(dat)
-
+  if(is.null(dat_ref)){
+    corN <- n_method(dat)
+  }else{
+    dat_ref <- dat_ref[, colnames(dat)]
+    corN <- n_method(dat_ref)
+  }
   if(PID != "all"){
-    # remove the id not in the dat
+  # remove the id not in the dat
     PID <- rownames(dat)[which(rownames(dat) %in% PID)]
   }else{
     PID <- rownames(dat)
   }
-  netlist <- lapply(PID, function(x){tmp_dat <- rbind(dat, dat[x,]);
-  p_cor <- n_method(tmp_dat);
-  p_cor <- value_d[x,1]*(p_cor-corN)+corN;
-  diag(p_cor) <- 0; p_cor})
+
+  if(is.null(dat_ref)){
+    netlist <- lapply(PID, function(x){tmp_dat <- rbind(dat, dat[x,]);
+                                      p_cor <- n_method(tmp_dat);
+                                      p_cor <- value_d[x,1]*(p_cor-corN)+corN;
+                                      diag(p_cor) <- 0; p_cor})
+  }else{
+    netlist <- lapply(PID, function(x){tmp_dat <- rbind(dat_ref, dat[x,]);
+    p_cor <- n_method(tmp_dat);
+    p_cor <- value_d[x,1]*(p_cor-corN)+corN;
+    diag(p_cor) <- 0; p_cor})
+  }
 
   # calculate the z-score of edge for each sample
   all_value <- lapply(netlist, function(x){x[lower.tri(x)]})
@@ -64,6 +78,8 @@ Sweet <- function(dat, s_method = .pearsonF, n_method = .pearsonF, balance = 0.1
   cutoff <- -qnorm(alpha, mean = 0, sd = 1)
   outlist <- lapply(outlist_z, function(x){x[abs(x) < cutoff] <- 0; x <- sign(x); as(x, "dgCMatrix")})
   names(outlist) <- names(outlist_z) <- PID
+
+
   if(out_z){
     return(outlist_z)
   }else{
@@ -71,3 +87,9 @@ Sweet <- function(dat, s_method = .pearsonF, n_method = .pearsonF, balance = 0.1
   }
 
 }
+
+
+
+
+
+

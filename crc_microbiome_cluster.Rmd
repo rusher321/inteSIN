@@ -1,0 +1,119 @@
+---
+title: "CRC tumor microbiome cluster"
+output: html_notebook
+---
+
+## load data 
+
+```{r}
+ac_icam <- readRDS("data/ac_icam.rds")
+microbiome <- ac_icam[[1]]
+phe <- ac_icam[[2]]
+phe_t <- phe
+rownames(phe_t) <- paste0(make.names(phe_t$Patient_ID), "T")
+```
+
+## sspg
+
+```{r}
+tumor_id <- microbiome[1:246, ]
+normal_id <- microbiome[247:492, ]
+sspg_res <- sspg(dat = microbiome, normalid = rownames(normal_id))
+epm <- sspg_res$epm[,-c(1:2)]
+rownames(epm) <- paste0("X", rownames(epm))
+ann_edge <- sspg_res$epm[,1:2]
+rownames(ann_edge) <- rownames(epm)
+```
+
+## sspg cluster 
+
+```{r}
+source("R/tinyFun.R")
+library(metastat)
+
+group <- data.frame(grp = c(rep("Tumor", 246), rep("Normal", 246)), row.names = make.names(rownames(microbiome)))
+sig_edga <- wilcox.customized(dat = t(epm), grp = group)
+
+epm_f <- epm[rownames(sig_edga[sig_edga$FDR < 0.05, ]), 1:246]
+
+library(ConsensusClusterPlus)
+results <- ConsensusClusterPlus(as.matrix(epm_f), maxK = 6, reps=10, pItem=0.8, pFeature=0.8, clusterAlg="pam",title="untitled_consensus_cluster",
+           innerLinkage="average", finalLinkage="average", distance="spearman", ml=NULL,
+           tmyPal=NULL,seed=12345,plot=NULL,writeTable=FALSE,weightsItem=NULL,weightsFeature=NULL,verbose=F)
+
+if(F){
+saveRDS(list(sig_edga, results), file = "tests/ssgp_cluster1.rds")
+}
+```
+
+
+```{r,fig.height=8, fig.width=8}
+ccluster <- readRDS(file = "tests/ssgp_cluster1.rds")
+results <- ccluster[[2]]
+group <- results[[5]]$consensusClass
+group_d <- data.frame(group , row.names = names(group))
+
+phe_f <- phe_t[rownames(group_d), ]
+phe_f$group <- as.factor(group_d$group)
+phe_f$OS_Status <- ifelse(phe_f$OS_Status ==  "LIVING", 0, 1)
+phe_f$PFS_Status <- ifelse(phe_f$PFS_Status == "DiseaseFree", 0, 1)
+library(survminer)
+library(ggplot2)
+library(survival)
+library(RColorBrewer)
+icam_os_plot_t <- ggsurvplot(survfit(Surv(OS_Time, OS_Status)~ group,data = phe_f), pval = T, risk.table = T, risk.table.col = "strata", palette = brewer.pal(n = 5, name = "Set2"))
+
+icam_pfs_plot_t <- ggsurvplot(survfit(Surv(PFS_Time, PFS_Status)~ group,data = phe_f), pval = T, risk.table = T, risk.table.col = "strata", palette = brewer.pal(n = 5, name = "Set2"))
+icam_os_plot_t
+icam_pfs_plot_t
+```
+
+```{r}
+epm_f_c <- apply(epm_f, 1, scale)
+rownames(epm_f_c) <- colnames(epm_f)
+group_d$group <- paste0("Cluster_", group_d$group)
+group_d_order <- group_d[order(group_d$group),,drop=F]
+pheatmap::pheatmap(mat = epm_f_c[rownames(group_d_order),], annotation_row = group_d, show_rownames = F, show_colnames = F, cluster_cols = T, cluster_rows = F)
+
+```
+```{r}
+library(MASS)
+library(randomForest)
+group_d$group <- as.factor(group_d$group)
+rf_res <- randomForest(x = t(epm_f), y  = as.factor(group_d$group))
+kw_res <- KW_phenotypes(dat = t(epm_f), grp = group_d)
+tmp <- cbind(ann_edge[rownames(kw_res),], kw_res)
+pheatmap::pheatmap(mat = epm_f_c[rownames(group_d_order),a], annotation_row = group_d, show_rownames = F, show_colnames = F, cluster_cols = T, cluster_rows = F)
+
+# group3 vs others 
+group_d$group3 <- as.factor(ifelse(group_d$group == "Cluster_3", "Cluster_3", "Others"))
+kw_res_group3 <- KW_phenotypes(dat = t(epm_f), grp = group_d[, "group3", drop = F])
+kw_res_group3 <- cbind(ann_edge[rownames(kw_res_group3),], kw_res_group3)
+
+# group vs others
+group_d$group4 <- as.factor(ifelse(group_d$group == "Cluster_4", "Cluster_4", "Others"))
+kw_res_group4 <- KW_phenotypes(dat = t(epm_f), grp = group_d[, "group4", drop = F])
+kw_res_group4 <- cbind(ann_edge[rownames(kw_res_group4),], kw_res_group4)
+
+
+```
+
+```{r}
+# network 
+
+
+
+```
+
+
+```{r, warning=F, echo=F}
+library(tidyverse)
+library(gtsummary)
+phe_f$group <- paste0("cluster_", phe_f$group)
+colnames(phe_f) <- make.names(colnames(phe_f))
+phe_f |> select(Age, Location, Self.reported.sex, Path_tumor_stage, group) |> tbl_summary(by = group) |> add_p() |>
+  add_overall() |>
+  bold_labels()
+```
+
+

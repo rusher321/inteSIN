@@ -1,0 +1,146 @@
+---
+title: "Evaluation of SIN"
+output: html_notebook
+---
+
+## load comparitive result 
+
+```{r}
+load("crc_analysis_files/Noref_spearman_ssn.rds")
+```
+
+## number of diffrential marker
+
+```{r, echo=F, warning=F}
+library(tidyverse)
+
+marker_stat <- function(method_res, method){
+  
+  study1 <- method_res$WirbelJ_2018$degree |> mutate(study = "WirbelJ_2018")
+  study2 <- method_res$YachidaS_2019$degree |> mutate(study = "YachidaS_2019")
+  study3 <- method_res$YuJ_2015$degree |> mutate(study = "YuJ_2015")
+  com_degree <- do.call("rbind", list(study1, study2, study3)) |> as.data.frame() |> mutate(method = "csnet", centrality = "degree")
+  
+  study1 <- method_res$WirbelJ_2018$betweeness |> mutate(study = "WirbelJ_2018")
+  study2 <- method_res$YachidaS_2019$betweeness |> mutate(study = "YachidaS_2019")
+  study3 <- method_res$YuJ_2015$betweeness |> mutate(study = "YuJ_2015")
+  com_betweeness <- do.call("rbind", list(study1, study2, study3)) |> as.data.frame() |> mutate(method = "csnet", centrality = "betweeness")
+  
+  study1 <- method_res$WirbelJ_2018$closeness |> mutate(study = "WirbelJ_2018")
+  study2 <- method_res$YachidaS_2019$closeness |> mutate(study = "YachidaS_2019")
+  study3 <- method_res$YuJ_2015$closeness |> mutate(study = "YuJ_2015")
+  com_closeness <- do.call("rbind", list(study1, study2, study3)) |> as.data.frame() |> mutate(method = "csnet", centrality = "closeness")
+  
+  out <- rbind(com_degree, com_betweeness, com_closeness) |> as.data.frame() |> na.omit()|> group_by(study, centrality, enrich) |> summarise(n= n()) |> as.data.frame() 
+  out$method <- method
+  out
+}
+
+method_list <- list(csnet_list, sweet_list, iENA_list, ssn_list, lioness_list)
+methods <- c("csnet", "sweet", "iENA", "ssn", "lioness")
+
+stat_res <- lapply(1:5, function(i){out <- marker_stat(method_res = method_list[[i]], method = methods[i]); return(out)})
+
+stat_spearman_noref <- do.call("rbind", stat_res)
+
+# RA
+load("crc_analysis_files/crc_ra_compare.rds")
+study1 <- res_wirbe |> mutate(study = "WirbelJ_2018")
+study2 <- res_yachi |> mutate(study = "YachidaS_2019")
+study3 <- res_yujun |> mutate(study = "YuJ_2015")
+com_ra <- do.call("rbind", list(study1, study2, study3)) |> as.data.frame() |> mutate(method = "RA", centrality = "RA") |> group_by(study, centrality, enrich) |> summarise(n= n()) |> mutate(method = "RA") |>  na.omit()
+
+# CLR RA 
+load("crc_analysis_files/crc_clr_ra_compare.rds")
+study1 <- res_wirbe |> mutate(study = "WirbelJ_2018")
+study2 <- res_yachi |> mutate(study = "YachidaS_2019")
+study3 <- res_yujun |> mutate(study = "YuJ_2015")
+com_ra_clr <- do.call("rbind", list(study1, study2, study3)) |> as.data.frame() |> mutate(method = "RA_clr", centrality = "RA") |> group_by(study, centrality, enrich) |> summarise(n= n()) |> mutate(method = "RA_clr") |>  na.omit()
+
+
+qdat <- rbind(stat_spearman_noref, com_ra, com_ra_clr)
+qdat_degree <- qdat[qdat$centrality %in% c("degree", "RA"), ] |> filter(enrich != "none")
+qdat_degree$method <- factor(qdat_degree$method, levels = c("RA", "RA_clr", "ssn", "lioness", "sweet", "iENA", "csnet"))
+
+mytheme <- function(){
+  theme(
+  axis.title = ggplot2::element_text(size = 14,color = "black"),
+  axis.text = ggplot2::element_text(size = 13,color = "black"),
+  # axis.text.x = ggplot2::element_text(angle = 45,hjust = 1,vjust = 1,face = "italic"),
+  legend.title = ggplot2::element_text(size = 14,color = "black"),
+  legend.text = ggplot2::element_text(size = 13,color = "black"),
+  #panel.grid = ggplot2::element_blank(),
+  plot.title = ggplot2::element_text(size = 14,hjust = 0.5),
+  strip.text = ggplot2::element_text(size = 13)
+  #strip.background = ggplot2::element_blank())
+  )
+}
+
+ggplot(qdat_degree, aes(x = method, y = n, fill = enrich))+geom_bar(stat = "identity")+facet_grid(.~study)+theme_bw()+mytheme()+theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+
+
+```
+```{r}
+load("crc_analysis_files/Noref_sparCC_ssn.rds")
+
+method_list <- list(csnet_list, sweet_list_sparcc, iENA_list_sparcc, ssn_list_sparcc, lioness_list_sparcc)
+methods <- c("csnet", "sweet", "iENA", "ssn", "lioness")
+
+stat_res <- lapply(1:5, function(i){out <- marker_stat(method_res = method_list[[i]], method = methods[i]); return(out)})
+
+stat_sparcc_noref <- do.call("rbind", stat_res)
+
+qdat <- rbind(stat_sparcc_noref, com_ra, com_ra_clr)
+qdat_degree <- qdat[qdat$centrality %in% c("degree", "RA"), ] |> filter(enrich != "none")
+qdat_degree$method <- factor(qdat_degree$method, levels = c("RA", "RA_clr", "ssn", "lioness", "sweet", "iENA", "csnet"))
+
+ggplot(qdat_degree, aes(x = method, y = n, fill = enrich))+geom_bar(stat = "identity")+facet_grid(.~study)+theme_bw()+mytheme()+theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+```
+
+```{r}
+load("crc_analysis_files/ref_spearman_ssn.rds")
+
+method_list <- list(csnet_list_ref, sweet_list_ref, iENA_list_ref, ssn_list_ref, lioness_list_ref, sspg_list_ref)
+methods <- c("csnet", "sweet", "iENA", "ssn", "lioness", "sspg")
+
+stat_res <- lapply(1:6, function(i){out <- marker_stat(method_res = method_list[[i]], method = methods[i]); return(out)})
+
+stat_ref_noref <- do.call("rbind", stat_res)
+
+qdat <- rbind(stat_ref_noref, com_ra, com_ra_clr)
+qdat_degree <- qdat[qdat$centrality %in% c("degree", "RA"), ] |> filter(enrich != "none")
+qdat_degree$method <- factor(qdat_degree$method, levels = c("RA", "RA_clr", "ssn", "lioness", "sweet", "iENA", "csnet", "sspg"))
+
+ggplot(qdat_degree, aes(x = method, y = n, fill = enrich))+geom_bar(stat = "identity")+facet_grid(.~study)+theme_bw()+mytheme()+theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+```
+
+```{r}
+load("crc_analysis_files/ref_sparCC_ssn.rds")
+
+method_list <- list(csnet_list_ref_sparcc, sweet_list_ref_sparcc, iENA_list_ref, ssn_list_ref_sparcc, lioness_list_ref_sparcc, sspg_list_ref_sparcc )
+methods <- c("csnet", "sweet", "iENA", "ssn", "lioness", "sspg")
+
+stat_res <- lapply(1:6, function(i){out <- marker_stat(method_res = method_list[[i]], method = methods[i]); return(out)})
+
+stat_sparcc_ref <- do.call("rbind", stat_res)
+
+qdat <- rbind(stat_sparcc_ref, com_ra, com_ra_clr)
+qdat_degree <- qdat[qdat$centrality %in% c("degree", "RA"), ] |> filter(enrich != "none")
+qdat_degree$method <- factor(qdat_degree$method, levels = c("RA", "RA_clr","ssn", "lioness", "sweet", "iENA", "csnet", "sspg"))
+
+ggplot(qdat_degree, aes(x = method, y = n, fill = enrich))+geom_bar(stat = "identity")+facet_grid(.~study)+theme_bw()+mytheme()+theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+```
+
+
+## number of share diffrential marker 
+
+```{r}
+
+
+
+```
+

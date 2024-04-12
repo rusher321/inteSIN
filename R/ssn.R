@@ -1,9 +1,10 @@
 #' SSN:sample-specific networks
 #'
-#' @param matrix, row is gene/species, col is smaple/cell
+#' @param matrix, row is gene/species, col is sample/cell
 #' @param n_method, function :correlation method for feature-feature
-#' @param transF, F means list output; T means matrix
-#'
+#' @param transF, F means output using list type; T means matrix type
+#' @param alpha, significant cutoff, default =0.05
+#' @param dat_ref, matrix of the reference dataset
 #' @return specific sample network
 #'
 #' @importFrom reshape melt
@@ -20,23 +21,29 @@
 #' rownames(x) <- paste0("gene_", 1:num_genes)
 #' colnames(x) <- paste0("sample_", 1:num_samples)
 #' ssn_res <- ssn(t(x))
-ssn <- function(matrix, n_method = .pearsonF, transF = F, alpha = 0.05){
+ssn <- function(matrix, n_method = .pearsonF, transF = F, alpha = 0.05, dat_ref = NULL){
 
-  if(!is.function(n_method)){ stop("please use a function") }
-  if(!is.matrix(matrix)) { print("please use a numeric matrix as input") }
   cat("row is sample and colmun is feature!\n")
   cat("n_method need to be one of .pearsonF, .spearmanF, .kendallF and .sparccF!\n")
 
   samples <- rownames(matrix)
   nsamp <- nrow(matrix)
   # this applies netFun and extracts the aggregate network
-  aggNet <- n_method(matrix)
+  if(is.null(dat_ref)){
+    aggNet <- n_method(matrix)
+  }else{
+    aggNet <- n_method(dat_ref)
+  }
   # prepare the ssn output
   ssout_z <- list()
   ssout_p <- list()
   # run function f and the SS equation
   for(i in 1:nsamp){
-    ss <- n_method(rbind(matrix, matrix[i, ])) # apply n_method on all samples plus one
+    if(is.null(dat_ref)){
+      ss <- n_method(rbind(matrix, matrix[i, ])) # apply n_method on all samples plus one
+    }else{
+      ss <- n_method(rbind(dat_ref, matrix[i, ]))
+    }
     delta_ss <- ss-aggNet # apply ssn equation
     r_ss <- (1-delta_ss*delta_ss)/(nsamp-2)
     z_ss <- delta_ss/r_ss
