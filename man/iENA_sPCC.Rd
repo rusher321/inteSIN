@@ -4,7 +4,15 @@
 \alias{iENA_sPCC}
 \title{single sample pearson correlation in iENA}
 \usage{
-iENA_sPCC(dat, PID = "all", transF = F)
+iENA_sPCC(
+  dat,
+  PID = "all",
+  transF = F,
+  alpha = 0.05,
+  ref = F,
+  refmean = NULL,
+  refvar = NULL
+)
 }
 \arguments{
 \item{dat, }{matrix, row is gene/species, col is smaple/cell}

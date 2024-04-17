@@ -4,30 +4,52 @@
 \alias{lioness}
 \title{Linear Interpolation to Obtain Network Estimates for Single Samples}
 \usage{
-lioness(matrix, n_method = .pearsonF, transF = F)
+lioness(
+  matrix,
+  n_method = .pearsonF,
+  alpha = 0.05,
+  dat_ref = NULL,
+  verbose = F
+)
 }
 \arguments{
-\item{matrix, }{row is gene/species, col is smaple/cell}
+\item{matrix}{inputdata: row is gene/species, col is sample/cell}
 
-\item{n_method, }{function correlation method for feature-feature}
+\item{n_method}{function :correlation method for feature-feature including pearson
+spearman, kendall, sparcc, mutual information and Context Likelihood}
 
-\item{transF, }{list output or matrix}
+\item{alpha}{significant cutoff, default =0.05}
+
+\item{dat_ref}{matrix of the reference dataset}
+
+\item{verbose}{logical}
 }
 \value{
-specific sample network
+SNI object:
+\item{data}{your input table}
+\item{data_ref}{your reference data}
+\item{SNI_raw}{the raw value of pertubation matrix for each sample}
+\item{SNI_z}{the z value of pertubation matrix for each sample}
+\item{SNI_adj}{the adjcent matrix or network  for each sample}
+\item{SNI_cen}{the degree/betweeness/closeness for each sample}
 }
 \description{
 Linear Interpolation to Obtain Network Estimates for Single Samples
 }
 \examples{
-num_samples <- 5
-num_genes <- 6
+num_samples <- 100
+num_genes <- 60
 gene_matrix <- matrix(runif(num_samples * num_genes), ncol = num_samples)
 x <- as.data.frame(gene_matrix )
 rownames(x) <- paste0("gene_", 1:num_genes)
 colnames(x) <- paste0("sample_", 1:num_samples)
-lioness <- lioness(t(x))
+lioness_res <- lioness(t(x))
 }
 \references{
-Kuijjer ML, Tung MG, Yuan G, Quackenbush J, Glass K. Estimating Sample-Specific Regulatory Networks. iScience. 2019 Apr 26;14:226-240. doi: 10.1016/j.isci.2019.03.021 Add to Citavi project by DOI. Epub 2019 Mar 28. PMID: 30981959 Add to Citavi project by Pubmed ID; PMCID: PMC6463816.
+Kuijjer ML, Tung MG, Yuan G, Quackenbush J, Glass K. Estimating Sample-Specific Regulatory Networks. iScience. 2019 Apr 26;14:226-240. doi: 10.1016/j.isci.2019.03.021.
 }
+\seealso{
+Other SNI: 
+\code{\link{ssn}()}
+}
+\concept{SNI}

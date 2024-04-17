@@ -138,9 +138,91 @@ ggplot(qdat_degree, aes(x = method, y = n, fill = enrich))+geom_bar(stat = "iden
 
 ## number of share diffrential marker 
 
+```{r, fig.width=12}
+method_list <- list(csnet_list_ref_sparcc, sweet_list_ref_sparcc, iENA_list_ref, ssn_list_ref_sparcc, lioness_list_ref_sparcc, sspg_list_ref_sparcc )
+methods <- c("csnet", "sweet", "iENA", "ssn", "lioness", "sspg")
+names(method_list) <- methods
+
+library(ggVennDiagram)
+library(RColorBrewer)
+
+plist <- list()
+for(i in 1:6){
+  met_res <- method_list[[methods[i]]]
+  study1_marker <- met_res$WirbelJ_2018$degree 
+  study1_marker <- rownames(study1_marker[study1_marker$enrich!= "none", ])
+  study2_marker <- met_res$YachidaS_2019$degree 
+  study2_marker <- rownames(study2_marker[study2_marker$enrich!= "none", ])
+  study3_marker <- met_res$YuJ_2015$degree 
+  study3_marker <- rownames(study3_marker[study3_marker$enrich!= "none", ])
+
+  plist[[methods[i]]] <- ggVennDiagram(list(A=study1_marker, B=study2_marker, C=study3_marker), category.names = c("WirbelJ_2018", "YachidaS_2019", "YuJ_2015"))+scale_fill_distiller(palette = "RdBu")+ggtitle(methods[i])
+}
+cowplot::plot_grid(plotlist = plist, nrow = 2)
+```
+
+```{r, fig.width=14, fig.height=4}
+plot_heatmap <- function(datlist, centrality = "degree"){
+  
+  dat1 <- datlist$WirbelJ_2018[[centrality]]
+  dat2 <- datlist$YuJ_2015[[centrality]]
+  dat3 <- datlist$YachidaS_2019[[centrality]]
+  all_spe <- unique(c(rownames(dat1), rownames(dat2), rownames(dat3)))
+  qdat <- data.frame(wirbe = dat1[all_spe, ]$z_score, 
+                     yujun = dat2[all_spe, ]$z_score, 
+                     yachi = dat3[all_spe, ]$z_score, 
+                     row.names = all_spe)
+  qdat[is.na(qdat)] <- 0
+  qdat_p <- data.frame(wirbe = dat1[all_spe, ]$p.adjust, 
+                     yujun = dat2[all_spe, ]$p.adjust, 
+                     yachi = dat3[all_spe, ]$p.adjust, 
+                     row.names = all_spe)
+  qdat_p[is.na(qdat_p)] <- 1
+  
+  qdat_p_f <- qdat_p[apply(qdat_p, 1, function(x){any(x < 0.05)}), ]
+  qdat_p_f <- ifelse(qdat_p_f<0.05, 1, 0)
+  qdat_f <- qdat[rownames(qdat_p_f), ]
+  sigature <- sign(qdat_f)*qdat_p_f
+  qdat_p_num <- ifelse(sigature == 0, "", ifelse(sigature == 1, "+", "-") )
+  
+  pheatmap::pheatmap(t(qdat_f), display_numbers = t(qdat_p_num), fontsize_number = 12)
+}
+
+plot_heatmap(csnet_list_ref_sparcc)
+
+```
+
+```{r, fig.width=20, fig.height=4}
+plot_heatmap(iENA_list_ref_sparcc)
+```
+
+```{r, fig.width=20, fig.height=4}
+plot_heatmap(sspg_list_ref_sparcc)
+```
+```{r, fig.width=8, fig.height=4}
+plot_heatmap(sweet_list_ref_sparcc)
+```
+
+```{r, fig.width=12, fig.height=4}
+plot_heatmap(ssn_list_ref_sparcc)
+```
+
+```{r, fig.width=12, fig.height=4}
+plot_heatmap(lioness_list_ref_sparcc)
+```
+## based on DNB stratege 
+
+```{r}
+
+```
+
+## classification 
+
 ```{r}
 
 
-
 ```
+
+
+
 

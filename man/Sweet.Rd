@@ -11,23 +11,26 @@ Sweet(
   balance = 0.1,
   PID = "all",
   alpha = 0.05,
-  out_z = F
+  out_z = F,
+  dat_ref = NULL
 )
 }
 \arguments{
-\item{dat, }{row is gene/species, col is smaple/cell}
+\item{dat, }{row is gene/species, col is sample/cell}
 
 \item{s_method, }{function correlation method for sample-sample}
 
 \item{n_method, }{function correlation method for feature-feature}
 
-\item{balance, }{numeric,}
+\item{balance, }{numeric}
 
 \item{PID, }{sample id for specific or all}
 
 \item{alpha, }{significant cutoff}
 
-\item{out_z, }{logistic, F = output is zscore matrix, T = adj matrix}
+\item{out_z, }{logistic, F = output is z-score matrix, T = adjacent matrix}
+
+\item{dat_ref, }{matrix of the reference dataset}
 }
 \value{
 outlist, a list including specific network

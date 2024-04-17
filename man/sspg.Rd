@@ -4,14 +4,18 @@
 \alias{sspg}
 \title{Sample-specific perturbation of gene interactions}
 \usage{
-sspg(dat, normalid = NULL, refnet = NULL)
+sspg(dat, normalid = NULL, refnet = NULL, transF = F, alpha = 0.05)
 }
 \arguments{
-\item{dat}{, matrix row is sample id col is feature}
+\item{dat}{matrix row is sample id col is feature}
 
-\item{normalid}{,vector including normal sample id or normal sample index}
+\item{normalid}{vector including normal sample id or normal sample index}
 
-\item{refnet, }{background net : a matrix include node1 node2}
+\item{refnet}{background net : a matrix include node1 node2}
+
+\item{transF}{F mean output emp matrix; T mean output specific network}
+
+\item{alpha}{threshold to statistically significance of the emp matrix, default 0.05}
 }
 \value{
 list including delta rank matrix and edge perturbation matrix

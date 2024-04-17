@@ -93,7 +93,7 @@ csnet <- function(data, c = NULL, alpha = 0.01, boxsize = 0.1, weighted = FALSE)
     #print(d)
     if (weighted) {
       d <- d*(d>0)
-      csn[[k]] <- sparseMatrix(i = row(d)[d > p], j = col(d)[d > p], x = rep(1, sum(d > p)), dims = dim(d), dimnames = list(gid, gid))
+      csn[[k]] <- d
     } else {
       csn[[k]] <- sparseMatrix(i = row(d)[d > p], j = col(d)[d > p], x = rep(1, sum(d > p)), dims = dim(d), dimnames = list(gid, gid))
     }

@@ -38,8 +38,9 @@ library(rmeta)
 crc_meta_f <- filterPer(crc_meta, row = 1, percent = 0.1) |> t() |> renorm()
 crc_phe <- do.call("rbind", list(crc_data$Yachidas_meta[[1]], crc_data$yuj_meta[[1]], crc_data$WirbelJ_meta[[1]]))
 
-crc_phe_f <- crc_phe |> filter(disease == "CRC" | disease == "healthy") 
+crc_phe_f <- crc_phe |> filter(disease == "CRC" | disease == "healthy" |disease == "CRC;T2D"|disease == "T2D") 
 rownames(crc_phe_f) <- crc_phe_f$sample_id
+crc_phe_f$disease <- ifelse(crc_phe_f$disease == "CRC;T2D", "CRC", ifelse(crc_phe_f$disease == "T2D", "healthy", crc_phe_f$disease))
 crc_meta_f <- crc_meta_f[rownames(crc_phe_f), ]
 
 library(gtsummary)
@@ -184,9 +185,9 @@ pheatmap::pheatmap(t(qdat_f), display_numbers = t(qdat_p_num), fontsize_number =
 
 ```
 
-## SIN based On spearman 
+### SIN based On spearman 
 
-### Compute the SIN 
+#### Compute the SIN 
 
 ```{r, warning=F, message=F}
 library(igraph)
@@ -194,6 +195,7 @@ library(SpiecEasi)
 library(interSNI)
 library(metastat)
 library(ggstatsplot)
+library(birankr)
 
 # here use clr-transformed 
 datlist <- split(crc_meta_clr[rownames(crc_phe_f), ], crc_phe_f$study_name)
@@ -223,12 +225,16 @@ names(iENA_list) <- names(crc_phe_list)
 csnet_list <- lapply(1:3, function(i){intnet_com(dat = datlist2[[i]], phe = phelist[[i]], method = "csnet",ref = F, boxsize = 0.2)})
 names(csnet_list) <- names(crc_phe_list)
 
+# sspg 
+sspg_list <- lapply(1:3, function(i){intnet_com(dat = datlist2[[i]], phe = phelist[[i]], method = "sspg", ref = F)})
+names(sspg_list) <- names(crc_phe_list)
+
 # save
-save(sweet_list, ssn_list, lioness_list, iENA_list, csnet_list, file = "crc_analysis_files/Noref_spearman_ssn.rds")
+save(sweet_list, ssn_list, lioness_list, iENA_list, csnet_list, sspg_list, file = "crc_analysis_files/Noref_spearman_ssn.rds")
 
 ```
 
-## SIN based On sparcc 
+### SIN based On sparcc 
 
 ```{r, warning=F, message=F}
 # sweet 
@@ -241,24 +247,20 @@ names(ssn_list_sparcc) <- names(crc_phe_list)
 lioness_list_sparcc <- lapply(1:3, function(i){intnet_com(dat = datlist2[[i]], phe = phelist[[i]], method = "lioness",ref = F, n_method = .sparccF)})
 names(lioness_list_sparcc) <- names(crc_phe_list)
 # iENA 
-iENA_list_sparcc <- lapply(1:3, function(i){intnet_com(dat = datlist2[[i]], phe = phelist[[i]], method = "iENA",ref = F)})
-names(iENA_list_sparcc) <- names(crc_phe_list)
+iENA_list_sparcc <- iENA_list
+csnet_list_sparcc <- csnet_list
 
-save(sweet_list_sparcc, ssn_list_sparcc, lioness_list_sparcc, iENA_list_sparcc, csnet_list, file = "crc_analysis_files/Noref_sparCC_ssn.rds")
+
+save(sweet_list_sparcc, ssn_list_sparcc, lioness_list_sparcc, iENA_list_sparcc, csnet_list, sspg_list, file = "crc_analysis_files/Noref_sparCC_ssn.rds")
 
 ```
 
 
-## SIN based On spearman and refernce data 
+### SIN based On spearman and refernce data 
 
-### Compute the SIN 
+#### Compute the SIN 
 
 ```{r, warning=F, message=F}
-
-datlist <- split(crc_meta_clr[rownames(crc_phe_f), ], crc_phe_f$study_name)
-phelist <- crc_phe_list
-
-datlist2 <- split(as.data.frame(t(crc_meta[colnames(crc_meta_clr),rownames(crc_phe_f)]*10^7)), crc_phe_f$study_name)
 
 crc_phe_ref <- crc_phe_f[crc_phe_f$disease == "healthy", ]
 datlist_ref <- split(crc_meta_clr[rownames(crc_phe_ref), ], crc_phe_ref$study_name)
@@ -277,18 +279,23 @@ names(lioness_list_ref) <- names(crc_phe_list)
 
 # iENA 
 iENA_list_ref <- lapply(1:3, function(i){intnet_com(dat = datlist[[i]], phe = phelist[[i]], method = "iENA",ref = T)})
-names(iENA_list) <- names(crc_phe_list)
+names(iENA_list_ref) <- names(crc_phe_list)
 
 # csnet 
 csnet_list_ref <- lapply(1:3, function(i){intnet_com(dat = datlist2[[i]], phe = phelist[[i]], method = "csnet",ref = T, boxsize = 0.2)})
 names(csnet_list_ref) <- names(crc_phe_list)
 
+# 
+sspg_list_ref <- lapply(1:3, function(i){intnet_com(dat = datlist2[[i]], phe = phelist[[i]], method = "sspg", ref = T)})
+names(sspg_list_ref) <- names(crc_phe_list)
+
+
 # save
-save(sweet_list_ref, ssn_list_ref, lioness_list_ref, iENA_list_ref, csnet_list_ref, file = "crc_analysis_files/ref_spearman_ssn.rds")
+save(sweet_list_ref, ssn_list_ref, lioness_list_ref, iENA_list_ref, csnet_list_ref, sspg_list_ref, file = "crc_analysis_files/ref_spearman_ssn.rds")
 
 ```
 
-### reference data
+#### reference data
 
 ```{r, warning=F, message=F}
 
@@ -308,15 +315,86 @@ lioness_list_ref_sparcc <- lapply(1:3, function(i){intnet_com(dat = datlist2[[i]
 names(lioness_list_ref_sparcc) <- names(crc_phe_list)
 
 # iENA 
-iENA_list_ref_sparcc <- lapply(1:3, function(i){intnet_com(dat = datlist2[[i]], phe = phelist[[i]], method = "iENA",ref = T)})
-names(iENA_list) <- names(crc_phe_list)
+iENA_list_ref_sparcc <- iENA_list_ref
 
 # csnet 
-csnet_list_ref_sparcc <- lapply(1:3, function(i){intnet_com(dat = datlist2[[i]], phe = phelist[[i]], method = "csnet",ref = T, boxsize = 0.2)})
-names(csnet_list_ref_sparcc) <- names(crc_phe_list)
+csnet_list_ref_sparcc <- csnet_list_ref
+
+# sspg
+sspg_list_ref_sparcc <- sspg_list_ref
 
 # save
-save(sweet_list_ref_sparcc, ssn_list_ref_sparcc, lioness_list_ref_sparcc, iENA_list_ref_sparcc, csnet_list_ref_sparcc, file = "crc_analysis_files/ref_sparcc_ssn.rds")
+save(sweet_list_ref_sparcc, ssn_list_ref_sparcc, lioness_list_ref_sparcc, iENA_list_ref_sparcc, csnet_list_ref_sparcc, sspg_list_ref_sparcc, file = "crc_analysis_files/ref_sparcc_ssn.rds")
+
+```
+
+## Part3
+
+### infant cohort 
+```{r}
+library(tidyverse)
+
+infant_data <- readRDS("data/crc_infan.rds")
+infant_phe <- infant_data$infant_meta[[1]]
+infant_met <- infant_data$infant_meta[[2]]
+
+infant_phe_f <- infant_phe[infant_phe$age_category != "adult", ]
+
+library(gtsummary)
+infant_phe_f |> select(infant_age, antibiotics_current_use, gender, number_reads, born_method) |> tbl_summary(by = born_method) |> add_p() |>
+  add_overall() |>
+  bold_labels()
+
+```
+
+```{r}
+source("R/tinyFun.R")
+library(RColorBrewer)
+prevalences <- seq(0.05, 1, 0.05)
+detections <- 10^seq(log10(1e-3), log10(.2), length = 10)
+
+core_tax_plot(dat = t(infant_met), 
+                          prevalences = prevalences, 
+                          detections = detections, 
+                          min.prevalence = 0.5, top = 30)+
+  xlab("Detection Threshold (Relative Abundance (%))") +
+  theme(axis.text.y = element_text(face="italic"))
+
+
+```
+
+```{r}
+id <- c("SID519128_ba", "SID515126_ba") 
+
+sele_id <- infant_phe_f[infant_phe_f$subject_id %in% id, ] |> select(sample_id, infant_age, antibiotics_current_use, gender, number_reads, born_method)
+sele_id
+
+```
+
+```{r}
+library(rmeta)
+infant_met_f <- filterPer(infant_met, row = 1, percent = 0.1) |> t() |> renorm()
+infant_met_f <- na.omit(infant_met_f)
+infant_met_f <- round(infant_met_f*10^5, 0)
+
+infant_phe_f <- infant_phe_f[pmatch(rownames(infant_met_f), infant_phe_f$sample_id), ]
+
+infant_C <- infant_phe_f[infant_phe_f$born_method == "c_section", ]
+infant_C_ref4 <- infant_C[infant_C$infant_age ==4, ]
+infant_C_ref <- infant_met_f[ infant_C_ref4$sample_id[!is.na(infant_C_ref4$sample_id)],] 
+infant_C_met <- infant_met_f[infant_C$sample_id[!is.na(infant_C$sample_id)],]
+
+
+infant_V <- infant_phe_f[infant_phe_f$born_method == "vaginal", ]
+infant_V_ref4 <- infant_V[infant_V$infant_age ==4, ]
+infant_V_ref <- infant_met_f[infant_V_ref4$sample_id[!is.na(infant_V_ref4$sample_id)],] 
+infant_V_met <- infant_met_f[infant_V$sample_id[!is.na(infant_V$sample_id)],]
+
+# SSN 
+infant_c_sni <- ssn(matrix = infant_C_met, n_method = .sparccF, dat_ref = infant_C_ref)
+
+infant_V_sni <- ssn(matrix = infant_V_met, n_method = .sparccF, dat_ref = infant_V_ref)
+save(infant_c_sni, infant_V_sni, infant_phe_f, file = "data/infant_ssn.Rds")
 
 ```
 

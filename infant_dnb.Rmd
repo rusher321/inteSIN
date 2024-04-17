@@ -1,0 +1,46 @@
+---
+title: "DNB_test"
+output: html_notebook
+---
+
+## load SIN 
+
+```{r}
+load("data/infant_ssn.Rds")
+```
+
+## Test DNB 
+
+```{r}
+id <- c("SID519128_ba", "SID515126_ba") 
+
+sele_id <- infant_phe_f[infant_phe_f$subject_id %in% id, ] |> select(sample_id, infant_age, antibiotics_current_use, gender, number_reads, born_method)
+sele_id
+
+```
+
+```{r}
+## Vagninal 
+V_sample_id <- sele_id$sample_id[1:5]
+V_dnb <- search_dnb(sni_obj = infant_V_sni, sid = V_sample_id, min_size = 5, max_size = 30, count = T)
+V_dnb_final <- .get_final(dnb_res = V_dnb)
+plot_DNB(V_dnb_final)
+
+## C_section
+C_sample_id <- sele_id$sample_id[6:11]
+C_dnb <- search_dnb(sni_obj = infant_c_sni, sid = C_sample_id, min_size = 5, max_size = 30, count = T)
+C_dnb_final <- .get_final(dnb_res = C_dnb)
+plot_DNB(C_dnb_final)
+
+
+# antibiotic_use 
+id <- "B01616_ba"
+infant_phe_f[infant_phe_f$subject_id == id & !is.na(infant_phe_f$subject_id), ]  -> sele_id
+sele_id_order <- sele_id$sample_id[order(sele_id$infant_age)]
+
+V_dnb <- search_dnb(sni_obj = infant_V_sni, sid = sele_id_order, min_size = 5, max_size = 30, count = T)
+V_dnb_final <- .get_final(dnb_res = V_dnb)
+plot_DNB(V_dnb_final)
+
+
+```
